@@ -81,3 +81,14 @@ class BannerImpression(models.Model):
         db_table = 'bannerimpression_raw'
         managed = False
 
+class LandingPageImpression(models.Model):
+    ""
+    id = models.IntegerField(primary_key=True)
+    timestamp = models.DateTimeField(auto_now_add=False)
+    utm_source = models.CharField(max_length=255)
+    utm_campaign = models.CharField(max_length=255)
+    utm_medium = models.CharField(max_length=255)
+    landing_page = models.CharField(max_length=255)
+    project = models.ForeignKey(Project, null=True)
+    language = models.ForeignKey(Language, null=True)
+    country = models.ForeignKey(Country, null=True)

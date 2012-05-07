@@ -16,14 +16,17 @@ def lookup_country(country=None):
 
 @cache
 def lookup_language(language=None):
-    if language is None:
-        pass # TODO: an exception should probably be thrown
+    try:
+        if language is None:
+            pass # TODO: an exception should probably be thrown
 
-    # do we want to get or create?  additional error handling would be required
-    # if we set a static list and require that a language be in there, but this
-    # also means that anomalous log entries are caught
-    language, created = Language.objects.get_or_create(iso_code=language)
-    return language
+        # do we want to get or create?  additional error handling would be required
+        # if we set a static list and require that a language be in there, but this
+        # also means that anomalous log entries are caught
+        language, created = Language.objects.get_or_create(iso_code=language)
+        return language
+    except Exception:
+        print "INVALID LANGUAGE: %s" % language
 
 @cache
 def lookup_project(project=None):
