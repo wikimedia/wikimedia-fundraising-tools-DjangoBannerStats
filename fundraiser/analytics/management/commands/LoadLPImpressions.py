@@ -100,7 +100,7 @@ class Command(BaseCommand):
         nomatched = 0
         ignored = 0
 
-        batch_size = 20
+        batch_size = 1000
         batch_models = []
 
         with open(filename, 'r') as file:
@@ -236,13 +236,14 @@ class Command(BaseCommand):
             print e
             print "UNHANDLED EXCEPTION"
         try:
+            if squid_values and lp_values:
             # attempt to create all in batches
 #            print "INSERTING SQUID"
-            cursor.execute(squid_sql % ', '.join(squid_values))
+                cursor.execute(squid_sql % ', '.join(squid_values))
 #            print "INSERTING LP"
-            cursor.execute(lp_sql % ', '.join(lp_values))
+                cursor.execute(lp_sql % ', '.join(lp_values))
 #            print "COMMITTING"
-            transaction.commit('default')
+                transaction.commit('default')
 #            print "DONE"
         except IntegrityError:
 #            print "ROLLING BACK"
