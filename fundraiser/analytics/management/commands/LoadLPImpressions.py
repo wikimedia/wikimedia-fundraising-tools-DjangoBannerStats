@@ -114,7 +114,7 @@ class Command(BaseCommand):
                     if self.verbose:
                         if nomatched < 100:
                             print "*** NO MATCH FOR LANDING PAGE IMPRESSION ***"
-                            print l
+                            print l,
                             print "*** END OF NO MATCH ***"
                 else:
                     matched += 1
@@ -236,7 +236,7 @@ class Command(BaseCommand):
             print e
             print "UNHANDLED EXCEPTION"
         try:
-            if squid_values and lp_values:
+            if len(squid_values) > 0 and len(lp_values) > 0:
             # attempt to create all in batches
 #            print "INSERTING SQUID"
                 cursor.execute(squid_sql % ', '.join(squid_values))
