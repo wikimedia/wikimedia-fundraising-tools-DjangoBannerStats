@@ -1,17 +1,15 @@
-from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.core.management.base import BaseCommand
+from django.db import connections, transaction
 
 from datetime import datetime
+import MySQLdb
 from optparse import make_option
 import os
 import urlparse
-import re
 from django.db.utils import IntegrityError
 
-from analytics.cache import cache
-from analytics.functions import *
-from analytics.models import *
-from analytics.regex import *
+from fundraiser.analytics.functions import *
+from fundraiser.analytics.regex import *
 
 class Command(BaseCommand):
 
@@ -98,7 +96,7 @@ class Command(BaseCommand):
         matched = 0
         nomatched = 0
 
-        batch_size = 10
+        batch_size = 1500
         batch_models = []
 
         with open(filename, 'r') as file:
@@ -110,7 +108,7 @@ class Command(BaseCommand):
                     if self.debug:
                         print "NO MATCH - %s" % l
                     if self.verbose:
-                        if notmatched < 100:
+                        if nomatched < 100:
                             print "*** NO MATCH FOR BANNER IMPRESSION ***"
                             print l
                             print "*** END OF NO MATCH ***"
@@ -139,49 +137,63 @@ class Command(BaseCommand):
                     if "country" in qs:
                         country = lookup_country(qs["country"][0])
 
+                    # not using the models here saves a lot of wall time
                     batch_models.append((
-                        SquidRecord(squid=squid, sequence=seq, timestamp=timestamp),
-                        BannerImpression(timestamp=timestamp, banner=banner,campaign=campaign,
-                             project=project, language=language, country=country))
-                    )
+                        (squid.id, seq, timestamp.strftime("%Y-%m-%d %H:%M:%S")),
+                        (timestamp.strftime("%Y-%m-%d %H:%M:%S"), banner, campaign,
+                            project.id, language.id, country.id)
+                    ))
 
-                    if len(batch_models) > 0 and len(batch_models) % batch_size == 0:
+                    # write the models in batch
+                    if len(batch_models) % batch_size == 0:
                         self.write(batch_models)
+                        batch_models = []
 
-
+            # write out any remaining in the list
+            self.write(batch_models)
+            batch_models = []
 
         return matched, nomatched
 
     @transaction.commit_manually
     def write(self, list):
-        squids = []
-        banners = []
+        """
+        Commits a batch of transactions. Attempts a single query per model by splitting the
+        tuples of each banner impression and grouping by model.  If that fails, the function
+        falls back to a single transaction per banner impression
+        """
+        cursor = connections['default'].cursor()
 
-        if len(list) > 1:
-            for l in list:
-                s, b = l
-                squids.append(s)
-                banners.append(b)
-            try:
-                SquidRecord.objects.batch_create(squids)
-            except IntegrityError:
-                transaction.rollback()
+        squid_sql = "INSERT INTO `squidrecord` (squid_id, sequence, timestamp) VALUES %s"
+        banner_sql = "INSERT INTO `bannerimpression_raw` (timestamp, banner, campaign, project_id, language_id, country_id) VALUES %s"
 
-        elif len(list) == 1:
-            try:
-                for m in models[0]:
-                    m.save()
-                transaction.commit()
-            except IntegrityError:
-                transaction.rollback()
-        elif len(list) == 0:
-            return
+        squid_values = []
+        banner_values = []
 
-
-
-        pass
-
-    def process_line(self, values):
-        "Processes a matched squid line and inserts records into the database"
-
-
+        for s,b in list:
+            squid_values.append(
+                "(%s, %s, '%s')" % (
+                    MySQLdb.escape_string(str(s[0])),
+                    MySQLdb.escape_string(str(s[1])),
+                    MySQLdb.escape_string(str(s[2]))
+                )
+            )
+            banner_values.append(
+                "('%s', '%s', '%s', %s, %s, %s)" % (
+                    MySQLdb.escape_string(str(b[0])),
+                    MySQLdb.escape_string(str(b[1])),
+                    MySQLdb.escape_string(str(b[2])),
+                    MySQLdb.escape_string(str(b[3])),
+                    MySQLdb.escape_string(str(b[4])),
+                    MySQLdb.escape_string(str(b[5]))
+                )
+            )
+        try:
+            # attempt to create all in batches
+            cursor.execute(squid_sql % ', '.join(squid_values))
+            cursor.execute(banner_sql % ', '.join(banner_values))
+            transaction.commit('default')
+        except IntegrityError:
+            # someone was not happy, likely a SquidRecord
+            # TODO: break the batch into smaller batches and retry
+            transaction.rollback('default')
