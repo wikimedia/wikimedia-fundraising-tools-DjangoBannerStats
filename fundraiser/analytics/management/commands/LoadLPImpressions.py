@@ -152,7 +152,7 @@ class Command(BaseCommand):
                     elif "landing_page" in qs:
                         landingpage = qs["landing_page"][0]
                     elif url.path:
-                        tmp = re.match(r"wiki/(?P<page>[\S]+)", url.path)
+                        tmp = re.match(r"/wiki/(?P<page>[\S]+)", url.path)
                         if tmp:
                             landingpage = tmp.group("page")
 
