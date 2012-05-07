@@ -1,5 +1,5 @@
-from analytics.cache import *
-from analytics.models import *
+from fundraiser.analytics.cache import *
+from fundraiser.analytics.models import *
 
 
 @cache
