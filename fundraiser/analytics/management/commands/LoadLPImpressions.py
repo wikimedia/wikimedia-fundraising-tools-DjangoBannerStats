@@ -244,7 +244,8 @@ class Command(BaseCommand):
                 cursor.execute(lp_sql % ', '.join(lp_values))
 #            print "COMMITTING"
                 transaction.commit('default')
-#            print "DONE"
+                return
+            transaction.rollback('default')
         except IntegrityError:
 #            print "ROLLING BACK"
             # someone was not happy, likely a SquidRecord
@@ -256,7 +257,7 @@ class Command(BaseCommand):
         except TypeError:
             # this seems to happen when lp_values is empty
             # TODO: fix that
-            pass
+            transaction.rollback('default')
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -266,3 +267,4 @@ class Command(BaseCommand):
             if len(list) > 1:
                 for l in list:
                     self.write([l])
+        transaction.rollback('default')
