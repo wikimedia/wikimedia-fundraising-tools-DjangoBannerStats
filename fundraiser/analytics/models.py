@@ -24,6 +24,9 @@ class SquidRecord(models.Model):
         db_table = 'squidrecord'
         managed = False
 
+    def __unicode__(self):
+        return  "%s - %d" % (self.squid, self.sequence)
+
 class Project(models.Model):
     "Lookup table for project names"
     id = models.IntegerField(primary_key=True)
@@ -32,6 +35,9 @@ class Project(models.Model):
     class Meta:
         db_table = 'project'
         managed = False
+
+    def __unicode__(self):
+        return self.project
 
 class Language(models.Model):
     "Lookup table for languages"
@@ -43,6 +49,9 @@ class Language(models.Model):
         db_table = 'language'
         managed = False
 
+    def __unicode__(self):
+        return "%s (%s)" % (self.iso_code, self.language)
+
 class Country(models.Model):
     "Lookup table for countries"
     id = models.IntegerField(primary_key=True)
@@ -53,6 +62,9 @@ class Country(models.Model):
         db_table = 'country'
         managed = False
 
+
+    def __unicode__(self):
+        return self.iso_code
 
 class BannerImpression(models.Model):
     ""
