@@ -151,6 +151,10 @@ class Command(BaseCommand):
                             landingpage = qs["title"][0]
                     elif "landing_page" in qs:
                         landingpage = qs["landing_page"][0]
+                    elif url.path:
+                        tmp = re.match(r"wiki/(?P<page>[\S]+)")
+                        if tmp:
+                            landingpage = tmp.group("page")
 
                     language = None
                     if "language" in qs:
@@ -205,26 +209,32 @@ class Command(BaseCommand):
         squid_values = []
         lp_values = []
 
-        for s,b in list:
-            squid_values.append(
-                "(%s, %s, '%s')" % (
-                    MySQLdb.escape_string(str(s[0])),
-                    MySQLdb.escape_string(str(s[1])),
-                    MySQLdb.escape_string(str(s[2]))
+        try:
+            for s,b in list:
+                squid_values.append(
+                    "(%s, %s, '%s')" % (
+                        MySQLdb.escape_string(str(s[0])),
+                        MySQLdb.escape_string(str(s[1])),
+                        MySQLdb.escape_string(str(s[2]))
+                    )
                 )
-            )
-            lp_values.append(
-                "('%s', '%s', '%s', '%s', '%s', %s, %s, %s)"% (
-                    MySQLdb.escape_string(str(b[0])),
-                    MySQLdb.escape_string(str(b[1])),
-                    MySQLdb.escape_string(str(b[2])),
-                    MySQLdb.escape_string(str(b[3])),
-                    MySQLdb.escape_string(str(b[4])),
-                    MySQLdb.escape_string(str(b[5])),
-                    MySQLdb.escape_string(str(b[6])),
-                    MySQLdb.escape_string(str(b[7]))
+                lp_values.append(
+                    "('%s', '%s', '%s', '%s', '%s', %s, %s, %s)"% (
+                        MySQLdb.escape_string(str(b[0])),
+                        MySQLdb.escape_string(str(b[1])),
+                        MySQLdb.escape_string(str(b[2])),
+                        MySQLdb.escape_string(str(b[3])),
+                        MySQLdb.escape_string(str(b[4])),
+                        MySQLdb.escape_string(str(b[5])),
+                        MySQLdb.escape_string(str(b[6])),
+                        MySQLdb.escape_string(str(b[7]))
+                    )
                 )
-            )
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print e
+            print "UNHANDLED EXCEPTION"
         try:
             # attempt to create all in batches
 #            print "INSERTING SQUID"
