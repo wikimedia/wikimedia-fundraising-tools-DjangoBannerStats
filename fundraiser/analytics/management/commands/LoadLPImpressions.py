@@ -253,6 +253,10 @@ class Command(BaseCommand):
             if len(list) > 1:
                 for l in list:
                     self.write([l])
+        except TypeError:
+            # this seems to happen when lp_values is empty
+            # TODO: fix that
+            pass
         except Exception as e:
             import traceback
             traceback.print_exc()
