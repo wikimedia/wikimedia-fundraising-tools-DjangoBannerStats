@@ -4,15 +4,17 @@ from fundraiser.analytics.models import *
 
 @cache
 def lookup_country(country=None):
-    if country is None:
-        pass # TODO: an exception should probably be thrown
+    try:
+        if country is None:
+            pass # TODO: an exception should probably be thrown
 
-    # do we want to get or create?  additional error handling would be required
-    # if we set a static list and require that a country be in there, but this
-    # also means that anomalous log entries are caught
-    country, created = Country.objects.get_or_create(iso_code=country)
-    return country
-
+        # do we want to get or create?  additional error handling would be required
+        # if we set a static list and require that a country be in there, but this
+        # also means that anomalous log entries are caught
+        country, created = Country.objects.get_or_create(iso_code=country)
+        return country
+    except Exception:
+        print "INVALID COUNTRY: %s" % country
 
 @cache
 def lookup_language(language=None):
@@ -30,15 +32,17 @@ def lookup_language(language=None):
 
 @cache
 def lookup_project(project=None):
-    if project is None:
-        pass # TODO: an exception should probably be thrown
+    try:
+        if project is None:
+            pass # TODO: an exception should probably be thrown
 
-    # do we want to get or create?  additional error handling would be required
-    # if we set a static list and require that a project be in there, but this
-    # also means that anomalous log entries are caught
-    project, created = Project.objects.get_or_create(project=project)
-    return project
-
+        # do we want to get or create?  additional error handling would be required
+        # if we set a static list and require that a project be in there, but this
+        # also means that anomalous log entries are caught
+        project, created = Project.objects.get_or_create(project=project)
+        return project
+    except Exception as e:
+        print "INVALID PROJECT: %s" % project
 
 @cache
 def lookup_squidhost(hostname=None, create=True, verbose=False):
