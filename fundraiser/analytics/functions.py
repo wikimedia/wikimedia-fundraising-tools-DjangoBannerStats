@@ -27,6 +27,10 @@ def lookup_country(country=None, default="XX", create=True, verbose=False):
             return lookup_country(default, False, create, verbose)
         else:
             return None
+    if len(country) > 8:
+        if verbose:
+            print "** TRUNCATING COUNTRY ISO_CODE %s to %s" % (country, country[:8])
+        language = country[:8]
     try:
         country = Country.objects.get(iso_code=country)
         return country
@@ -68,6 +72,10 @@ def lookup_language(language=None, default="en", create=True, verbose=False):
             return lookup_language(default, False, create, verbose)
         else:
             return None
+    if len(language) > 24:
+        if verbose:
+            print "** TRUNCATING LANGUAGE ISO_CODE %s to %s" % (language, language[:24])
+        language = language[:24]
     try:
         language = Language.objects.get(iso_code=language)
         return language
@@ -109,6 +117,10 @@ def lookup_project(project=None, default="donatewiki", create=True, verbose=Fals
             return lookup_project(default, False, create, verbose)
         else:
             return None
+    if len(project) > 128:
+        if verbose:
+            print "** TRUNCATING PROJECT %s to %s" % (project, project[:128])
+        project = project[:128]
     try:
         project = Project.objects.get(project=project)
         return project
@@ -150,6 +162,10 @@ def lookup_squidhost(hostname=None, default="unknown", create=True, verbose=Fals
             return lookup_squidhost(default, False, create, verbose)
         else:
             return None
+    if len(hostname) > 128:
+        if verbose:
+            print "** TRUNCATING SQUID HOSTNAME %s to %s" % (hostname, hostname[:128])
+        hostname = hostname[:128]
     try:
         squid = SquidHost.objects.get(hostname=hostname)
         return squid
