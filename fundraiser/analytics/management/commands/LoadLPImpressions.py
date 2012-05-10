@@ -100,157 +100,176 @@ class Command(BaseCommand):
         nomatched = 0
         ignored = 0
 
-        batch_size = 1000
+        batch_size = 10
         batch_models = []
 
         with open(filename, 'r') as file:
             for l in file:
-                m = squidline.match(l)
-                if not m:
-                    # TODO: do we want to write the failed lines to another file for reprocessing?
-                    nomatched += 1
-                    if self.debug:
-                        print "NO MATCH - %s" % l
-                    if self.verbose:
-                        if nomatched < 100:
-                            print "*** NO MATCH FOR LANDING PAGE IMPRESSION ***"
-                            print l,
-                            print "*** END OF NO MATCH ***"
-                else:
-                    matched += 1
 
-                    # FOR DEBUG ONLY TO SEE IF WE ARE MATCHING EVERYTHING WE WANT
-#                    ignore = False
-                    # check to see if we want this impression
-#                    for r in landingpages_ignore:
-#                        if r.match(m.group("url")):
-#                            ignore = True
-#                            break
-#                    if ignore:
-#                        ignored += 1
-#                        continue
+                try:
 
-                    record = False
+                    m = squidline.match(l)
+                    if not m:
+                        # TODO: do we want to write the failed lines to another file for reprocessing?
+                        nomatched += 1
+                        if self.debug:
+                            print "NO MATCH - %s" % l
+                        if self.verbose:
+                            if nomatched < 100:
+                                print "*** NO MATCH FOR LANDING PAGE IMPRESSION ***"
+                                print l,
+                                print "*** END OF NO MATCH ***"
+                    else:
+                        matched += 1
 
-                    # check the landing page patterns
-                    for r in landingpages:
-                        record = r.match(m.group("url"))
-                        if record:
-#                            print m.group("url")
-                            break
+                        # FOR DEBUG ONLY TO SEE IF WE ARE MATCHING EVERYTHING WE WANT
+#                        ignore = False
+                        #check to see if we want this impression
+#                        for r in landingpages_ignore:
+#                            if r.match(m.group("url")):
+#                                ignore = True
+#                                break
+#                        if ignore:
+#                            ignored += 1
+#                            continue
 
-                    if not record:
-                        ignored += 1
-#                        print "NOT IGNORED & NOT MATCHED: %s" % m.group("url")
-                        continue
+                        record = False
 
-                    # go ahead and parse the URL
-                    url = urlparse.urlparse(m.group("url"))
-                    qs = urlparse.parse_qs(url.query, keep_blank_values=True)
+                        # check the landing page patterns
+                        for r in landingpages:
+                            record = r.match(m.group("url"))
+                            if record:
+#                                print m.group("url")
+                                break
 
-                    # grab the tracking information that should be common to any LP
-                    utm_source = ""
-                    utm_campaign = ""
-                    utm_medium = ""
+                        if not record:
+                            ignored += 1
+#                            print "NOT IGNORED & NOT MATCHED: %s" % m.group("url")
+                            continue
 
-                    if "utm_source" in qs:
-                        utm_source = qs["utm_source"][0]
-                    if "utm_campaign" in qs:
-                        utm_campaign = qs["utm_campaign"][0]
-                    if "utm_medium" in qs:
-                        utm_medium = qs["utm_medium"][0]
+                        # go ahead and parse the URL
+                        url = urlparse.urlparse(m.group("url"))
+                        qs = urlparse.parse_qs(url.query, keep_blank_values=True)
 
-                    landingpage = ""
-                    language = None
-                    country = None
-                    project = None
+                        # grab the tracking information that should be common to any LP
+                        utm_source = ""
+                        utm_campaign = ""
+                        utm_medium = ""
 
-                    if record.group("sitename") == "wikimediafoundation.org":
-                        project = lookup_project("foundationwiki")
+                        if "utm_source" in qs:
+                            utm_source = qs["utm_source"][0]
+                        if "utm_campaign" in qs:
+                            utm_campaign = qs["utm_campaign"][0]
+                        if "utm_medium" in qs:
+                            utm_medium = qs["utm_medium"][0]
 
-                        split = record.group("landingpage").rsplit('/', 2)
-                        lang, coun = ('','')
+                        landingpage = ""
+                        language = None
+                        country = None
+                        project = None
 
-                        if len(split) == 3:
-                            landingpage, lang, coun = split
-                        elif len(split) == 2:
-                            landingpage, lang = split
-                            coun = 'XX'
-                        elif len(split) == 1:
-                            landingpage = split
-                            coun = 'XX'
-                            lang = 'en'
+                        if record.group("sitename") == "wikimediafoundation.org":
+                            project = lookup_project("foundationwiki")
+
+                            split = record.group("landingpage").rsplit('/', 2)
+                            lang, coun = ('','')
+
+                            if len(split) == 3:
+                                landingpage, lang, coun = split
+                            elif len(split) == 2:
+                                landingpage, lang = split
+                                coun = 'XX'
+                            elif len(split) == 1:
+                                landingpage = split
+                                coun = 'XX'
+                                lang = 'en'
+                            else:
+                                # uh oh, TODO: do something informative
+                                pass
+
+                            # deal with the payment-processing chapters and their pages
+                            if lang in ('CH','DE','GB','FR'):
+                                language = lookup_language(coun)
+                                country = lookup_country(lang)
+                            else:
+                                language = lookup_language(lang)
+                                country = lookup_country(coun)
+
+                        elif record.group("sitename") == "donate.wikimedia.org":
+                            project = lookup_project("donatewiki")
+
+                            flp_vars = {
+                                "appeal" : qs["appeal"][0] if "appeal" in qs else "default",
+                                "country" : qs["country"][0] if "country" in qs else "XX",
+                                "language" : qs["uselang"][0] if "uselang" in qs else "en",
+                                "template" : qs["template"][0] if "template" in qs else "default",
+                                "form-template" : qs["form-template"][0] if "form-template" in qs else "default",
+                                "appeal-template" : qs["appeal-template"][0] if "appeal-template" in qs else "default",
+                                "form-countryspecific" : qs["form-countryspecific"][0] if "form-countryspecific" in qs else "default",
+                            }
+
+                            # go ahead and remove the cruft from the lp variables
+                            for k,v in flp_vars.iteritems():
+                                before,sep,after = v.rpartition('-')
+                                if after:
+                                    flp_vars[k] = after
+
+                            landingpage = '~'.join([
+                                flp_vars["template"],
+                                flp_vars["appeal-template"],
+                                flp_vars["appeal"],
+                                flp_vars["form-template"],
+                                flp_vars["form-countryspecific"]
+                            ])
+                            language = lookup_language(flp_vars["language"])
+                            country = lookup_language(flp_vars["country"])
+
                         else:
-                            # uh oh, TODO: do something informative
+                            # TODO: we have a weird problem, do something
                             pass
 
-                        # deal with the payment-processing chapters and their pages
-                        if lang in ('CH','DE','GB','FR'):
-                            language = lookup_language(coun)
-                            country = lookup_country(lang)
-                        else:
-                            language = lookup_language(lang)
-                            country = lookup_country(coun)
+                        if landingpage is "" or language is None or country is None or project is None:
+                            # something odd does not quite match in this request
+                            # TODO: do something informative
+                            print m.group("url")
+                            continue
 
-                    elif record.group("sitename") == "donate.wikimedia.org":
-                        project = lookup_project("donatewiki")
+                        squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
+                        seq = int(m.group("sequence"))
+                        timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
 
-                        flp_vars = {
-                            "appeal" : qs["appeal"][0] if "appeal" in qs else "default",
-                            "country" : qs["country"][0] if "country" in qs else "XX",
-                            "language" : qs["uselang"][0] if "uselang" in qs else "en",
-                            "template" : qs["template"][0] if "template" in qs else "default",
-                            "form-template" : qs["form-template"][0] if "form-template" in qs else "default",
-                            "appeal-template" : qs["appeal-template"][0] if "appeal-template" in qs else "default",
-                            "form-countryspecific" : qs["form-countryspecific"][0] if "form-countryspecific" in qs else "default",
-                        }
+                        # not using the models here saves a lot of wall time
+                        batch_models.append((
+                            (squid.id, seq, timestamp.strftime("%Y-%m-%d %H:%M:%S")),
+                            (timestamp.strftime("%Y-%m-%d %H:%M:%S"), utm_source,
+                                utm_campaign, utm_medium, landingpage, project.id,
+                                language.id, country.id)
+                        ))
 
-                        # go ahead and remove the cruft from the lp variables
-                        for k,v in flp_vars.iteritems():
-                            before,sep,after = v.rpartition('-')
-                            if after:
-                                flp_vars[k] = after
+                        # write the models in batch
+                        if len(batch_models) % batch_size == 0:
+                            self.write(batch_models)
+                            batch_models = []
+                except Exception as e:
+                    import traceback
+                    print "** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **"
+                    traceback.print_exc()
+                    print e
+                    print "******************************************"
+                    print l
+                    print "******************************************"
 
-                        landingpage = '~'.join([
-                            flp_vars["template"],
-                            flp_vars["appeal-template"],
-                            flp_vars["appeal"],
-                            flp_vars["form-template"],
-                            flp_vars["form-countryspecific"]
-                        ])
-                        language = lookup_language(flp_vars["language"])
-                        country = lookup_language(flp_vars["country"])
 
-                    else:
-                        # TODO: we have a weird problem, do something
-                        pass
-
-                    if landingpage is "" or language is None or country is None or project is None:
-                        # something odd does not quite match in this request
-                        # TODO: do something informative
-                        print m.group("url")
-                        continue
-
-                    squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
-                    seq = int(m.group("sequence"))
-                    timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
-
-                    # not using the models here saves a lot of wall time
-                    batch_models.append((
-                        (squid.id, seq, timestamp.strftime("%Y-%m-%d %H:%M:%S")),
-                        (timestamp.strftime("%Y-%m-%d %H:%M:%S"), utm_source,
-                            utm_campaign, utm_medium, landingpage, project.id,
-                            language.id, country.id)
-                    ))
-
-                    # write the models in batch
-                    if len(batch_models) % batch_size == 0:
-                        self.write(batch_models)
-                        batch_models = []
-
-            # write out any remaining in the list
-            self.write(batch_models)
-            batch_models = []
+            try:
+                # write out any remaining in the list
+                self.write(batch_models)
+                batch_models = []
+            except Exception as e:
+                import traceback
+                print "** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **"
+                traceback.print_exc()
+                print e
+                print "******************************************"
 
         return matched, nomatched, ignored
 
