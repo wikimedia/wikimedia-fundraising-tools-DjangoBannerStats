@@ -28,16 +28,16 @@ def lookup_country(country=None, default="XX", create=True, verbose=False):
         else:
             return None
     try:
-        country = Country.objects.get(country=country)
+        country = Country.objects.get(iso_code=country)
         return country
     except Country.DoesNotExist:
         if create:
             # doing this in two steps as unmanaged models seem to have an
             # issue immediately grabbing the primary key (id)
-            Country.objects.create(country=country)
-            country = Country.objects.get(country=country)
+            Country.objects.create(iso_code=country)
+            country = Country.objects.get(iso_code=country)
             if verbose and country:
-                print "** CREATED PROJECT FOR: %s (id:%d)" % (country.country, country.id)
+                print "** CREATED PROJECT FOR: %s (id:%d)" % (country.iso_code, country.id)
             return country
         else:
             return None
@@ -69,16 +69,16 @@ def lookup_language(language=None, default="en", create=True, verbose=False):
         else:
             return None
     try:
-        language = Language.objects.get(language=language)
+        language = Language.objects.get(iso_code=language)
         return language
     except Language.DoesNotExist:
         if create:
             # doing this in two steps as unmanaged models seem to have an
             # issue immediately grabbing the primary key (id)
-            Language.objects.create(language=language)
+            Language.objects.create(iso_code=language)
             language = Language.objects.get(language=language)
             if verbose and language:
-                print "** CREATED PROJECT FOR: %s (id:%d)" % (language.language, language.id)
+                print "** CREATED PROJECT FOR: %s (id:%d)" % (language.iso_code, language.id)
             return language
         else:
             return None
