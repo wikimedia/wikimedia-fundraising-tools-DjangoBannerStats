@@ -23,7 +23,7 @@ def lookup_country(country=None, default="XX", create=True, verbose=False):
     if not country or country is None:
         if not default is False:
             if verbose:
-                print "** INVALID PROJECT, returning default (%s)" % default
+                print "** INVALID COUNTRY, returning default (%s)" % default
             return lookup_country(default, False, create, verbose)
         else:
             return None
@@ -37,7 +37,7 @@ def lookup_country(country=None, default="XX", create=True, verbose=False):
             Country.objects.create(iso_code=country)
             country = Country.objects.get(iso_code=country)
             if verbose and country:
-                print "** CREATED PROJECT FOR: %s (id:%d)" % (country.iso_code, country.id)
+                print "** CREATED COUNTRY FOR: %s (id:%d)" % (country.iso_code, country.id)
             return country
         else:
             return None
@@ -64,7 +64,7 @@ def lookup_language(language=None, default="en", create=True, verbose=False):
     if not language or language is None:
         if not default is False:
             if verbose:
-                print "** INVALID PROJECT, returning default (%s)" % default
+                print "** INVALID LANGUAGE, returning default (%s)" % default
             return lookup_language(default, False, create, verbose)
         else:
             return None
@@ -78,7 +78,7 @@ def lookup_language(language=None, default="en", create=True, verbose=False):
             Language.objects.create(iso_code=language)
             language = Language.objects.get(iso_code=language)
             if verbose and language:
-                print "** CREATED PROJECT FOR: %s (id:%d)" % (language.iso_code, language.id)
+                print "** CREATED LANGUAGE FOR: %s (id:%d)" % (language.iso_code, language.id)
             return language
         else:
             return None
