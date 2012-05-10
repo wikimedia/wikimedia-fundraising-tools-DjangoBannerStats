@@ -78,7 +78,7 @@ class Command(BaseCommand):
             print "DONE"
             print "Total matched: %d" % self.matched
             print "Total not matched: %d" % self.nomatched
-            print "Finished in %d seconds" % (endtime - starttime).seconds
+            print "Finished in %d.%d seconds" % ((endtime - starttime).seconds, (endtime - starttime).microseconds)
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -119,74 +119,134 @@ class Command(BaseCommand):
                 else:
                     matched += 1
 
+                    # FOR DEBUG ONLY TO SEE IF WE ARE MATCHING EVERYTHING WE WANT
+#                    ignore = False
                     # check to see if we want this impression
-                    record = re.search(r"utm_source", m.group("url"), flags=re.VERBOSE|re.IGNORECASE)
+#                    for r in landingpages_ignore:
+#                        if r.match(m.group("url")):
+#                            ignore = True
+#                            break
+#                    if ignore:
+#                        ignored += 1
+#                        continue
+
+                    record = False
+
+                    # check the landing page patterns
+                    for r in landingpages:
+                        record = r.match(m.group("url"))
+                        if record:
+#                            print m.group("url")
+                            break
+
                     if not record:
                         ignored += 1
+#                        print "NOT IGNORED & NOT MATCHED: %s" % m.group("url")
                         continue
 
+                    # go ahead and parse the URL
                     url = urlparse.urlparse(m.group("url"))
                     qs = urlparse.parse_qs(url.query, keep_blank_values=True)
+
+                    # grab the tracking information that should be common to any LP
+                    utm_source = ""
+                    utm_campaign = ""
+                    utm_medium = ""
+
+                    if "utm_source" in qs:
+                        utm_source = qs["utm_source"][0]
+                    if "utm_campaign" in qs:
+                        utm_campaign = qs["utm_campaign"][0]
+                    if "utm_medium" in qs:
+                        utm_medium = qs["utm_medium"][0]
+
+                    landingpage = ""
+                    language = None
+                    country = None
+                    project = None
+
+                    if record.group("sitename") == "wikimediafoundation.org":
+                        project = lookup_project("foundationwiki")
+
+                        split = record.group("landingpage").rsplit('/', 2)
+                        lang, coun = ('','')
+
+                        if len(split) == 3:
+                            landingpage, lang, coun = split
+                        elif len(split) == 2:
+                            landingpage, lang = split
+                            coun = 'XX'
+                        elif len(split) == 1:
+                            landingpage = split
+                            coun = 'XX'
+                            lang = 'en'
+                        else:
+                            # uh oh, TODO: do something informative
+                            pass
+
+                        # deal with the payment-processing chapters and their pages
+                        if lang in ('CH','DE','GB','FR'):
+                            language = lookup_language(coun)
+                            country = lookup_country(lang)
+                        else:
+                            language = lookup_language(lang)
+                            country = lookup_country(coun)
+
+                    elif record.group("sitename") == "donate.wikimedia.org":
+                        project = lookup_project("donatewiki")
+
+                        flp_vars = {
+                            "appeal" : qs["appeal"][0] if "appeal" in qs else "default",
+                            "country" : qs["country"][0] if "country" in qs else "XX",
+                            "language" : qs["uselang"][0] if "uselang" in qs else "en",
+                            "template" : qs["template"][0] if "template" in qs else "default",
+                            "form-template" : qs["form-template"][0] if "form-template" in qs else "default",
+                            "appeal-template" : qs["appeal-template"][0] if "appeal-template" in qs else "default",
+                            "form-countryspecific" : qs["form-countryspecific"][0] if "form-countryspecific" in qs else "default",
+                        }
+
+                        # go ahead and remove the cruft from the lp variables
+                        for k,v in flp_vars.iteritems():
+                            before,sep,after = v.rpartition('-')
+                            if after:
+                                flp_vars[k] = after
+
+                        landingpage = '~'.join([
+                            flp_vars["template"],
+                            flp_vars["appeal-template"],
+                            flp_vars["appeal"],
+                            flp_vars["form-template"],
+                            flp_vars["form-countryspecific"]
+                        ])
+                        language = lookup_language(flp_vars["language"])
+                        country = lookup_language(flp_vars["country"])
+
+                    else:
+                        # TODO: we have a weird problem, do something
+                        pass
+
+                    if landingpage is "" or language is None or country is None or project is None:
+                        # something odd does not quite match in this request
+                        # TODO: do something informative
+                        print m.group("url")
+                        continue
 
                     squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
                     seq = int(m.group("sequence"))
                     timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
 
-                    utm_source = ""
-                    if "utm_source" in qs:
-                        utm_source = qs["utm_source"][0]
-                    utm_campaign = ""
-                    if "utm_campaign" in qs:
-                        utm_campaign = qs["utm_campaign"][0]
-                    utm_medium = ""
-                    if "utm_medium" in qs:
-                        utm_medium = lookup_project(qs["utm_medium"][0])
-
-                    landingpage = ""
-                    if "title" in qs:
-                        if qs["title"][0].lower() == "Special:LandingCheck".lower():
-                            if "landing_page" in qs:
-                                landingpage = lookup_language(qs["landing_page"][0])
-                        else:
-                            landingpage = qs["title"][0]
-                    elif "landing_page" in qs:
-                        landingpage = qs["landing_page"][0]
-                    elif url.path:
-                        tmp = re.match(r"/wiki/(?P<page>[\S]+)", url.path)
-                        if tmp:
-                            landingpage = tmp.group("page")
-
-                    language = None
-                    if "language" in qs:
-                        language = lookup_language(qs["language"][0])
-                    country = None
-                    if "country" in qs:
-                        country = lookup_country(qs["country"][0])
-
-                    # TODO: implement some wmfwiki/donate check
-                    project_id = 0
-
-                    if landingpage is "":
-                        print m.group("url")
-
-#                    continue
-
                     # not using the models here saves a lot of wall time
                     batch_models.append((
                         (squid.id, seq, timestamp.strftime("%Y-%m-%d %H:%M:%S")),
                         (timestamp.strftime("%Y-%m-%d %H:%M:%S"), utm_source,
-                            utm_campaign, utm_medium, landingpage, project_id,
-                            0, 0)
-#                            language.id, country.id)
+                            utm_campaign, utm_medium, landingpage, project.id,
+                            language.id, country.id)
                     ))
-
-
 
                     # write the models in batch
                     if len(batch_models) % batch_size == 0:
                         self.write(batch_models)
                         batch_models = []
-#                        return matched, nomatched, ignored
 
             # write out any remaining in the list
             self.write(batch_models)
@@ -238,16 +298,12 @@ class Command(BaseCommand):
         try:
             if len(squid_values) > 0 and len(lp_values) > 0:
             # attempt to create all in batches
-#            print "INSERTING SQUID"
                 cursor.execute(squid_sql % ', '.join(squid_values))
-#            print "INSERTING LP"
                 cursor.execute(lp_sql % ', '.join(lp_values))
-#            print "COMMITTING"
                 transaction.commit('default')
                 return
             transaction.rollback('default')
         except IntegrityError:
-#            print "ROLLING BACK"
             # someone was not happy, likely a SquidRecord
             # TODO: break the batch into smaller batches and retry
             transaction.rollback('default')
