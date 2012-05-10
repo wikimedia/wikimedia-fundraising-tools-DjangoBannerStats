@@ -76,7 +76,7 @@ def lookup_language(language=None, default="en", create=True, verbose=False):
             # doing this in two steps as unmanaged models seem to have an
             # issue immediately grabbing the primary key (id)
             Language.objects.create(iso_code=language)
-            language = Language.objects.get(language=language)
+            language = Language.objects.get(iso_code=language)
             if verbose and language:
                 print "** CREATED PROJECT FOR: %s (id:%d)" % (language.iso_code, language.id)
             return language
