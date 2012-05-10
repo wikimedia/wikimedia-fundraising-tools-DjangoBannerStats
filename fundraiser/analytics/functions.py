@@ -35,16 +35,23 @@ def lookup_country(country=None, default="XX", create=True, verbose=False):
         country = Country.objects.get(iso_code=country)
         return country
     except Country.DoesNotExist:
-        if create:
-            # doing this in two steps as unmanaged models seem to have an
-            # issue immediately grabbing the primary key (id)
-            Country.objects.create(iso_code=country)
-            country = Country.objects.get(iso_code=country)
-            if verbose and country:
-                print "** CREATED COUNTRY FOR: %s (id:%d)" % (country.iso_code, country.id)
-            return country
-        else:
-            return None
+        try:
+            if create:
+                # doing this in two steps as unmanaged models seem to have an
+                # issue immediately grabbing the primary key (id)
+                Country.objects.create(iso_code=country)
+                country = Country.objects.get(iso_code=country)
+                if verbose and country:
+                    print "** CREATED COUNTRY FOR: %s (id:%d)" % (country.iso_code, country.id)
+                return country
+            else:
+                return None
+        except Warning:
+            #TODO: use the default
+            pass
+    except Warning:
+        #TODO: use the default
+        pass
 
 @cache
 def lookup_language(language=None, default="en", create=True, verbose=False):
@@ -80,16 +87,23 @@ def lookup_language(language=None, default="en", create=True, verbose=False):
         language = Language.objects.get(iso_code=language)
         return language
     except Language.DoesNotExist:
-        if create:
-            # doing this in two steps as unmanaged models seem to have an
-            # issue immediately grabbing the primary key (id)
-            Language.objects.create(iso_code=language)
-            language = Language.objects.get(iso_code=language)
-            if verbose and language:
-                print "** CREATED LANGUAGE FOR: %s (id:%d)" % (language.iso_code, language.id)
-            return language
-        else:
-            return None
+        try:
+            if create:
+                # doing this in two steps as unmanaged models seem to have an
+                # issue immediately grabbing the primary key (id)
+                Language.objects.create(iso_code=language)
+                language = Language.objects.get(iso_code=language)
+                if verbose and language:
+                    print "** CREATED LANGUAGE FOR: %s (id:%d)" % (language.iso_code, language.id)
+                return language
+            else:
+                return None
+        except Warning:
+            #TODO: use the default
+            pass
+    except Warning:
+        #TODO: use the default
+        pass
 
 @cache
 def lookup_project(project=None, default="donatewiki", create=True, verbose=False):
@@ -125,16 +139,23 @@ def lookup_project(project=None, default="donatewiki", create=True, verbose=Fals
         project = Project.objects.get(project=project)
         return project
     except Project.DoesNotExist:
-        if create:
-            # doing this in two steps as unmanaged models seem to have an
-            # issue immediately grabbing the primary key (id)
-            Project.objects.create(project=project)
-            project = Project.objects.get(project=project)
-            if verbose and project:
-                print "** CREATED PROJECT FOR: %s (id:%d)" % (project.project, project.id)
-            return project
-        else:
-            return None
+        try:
+            if create:
+                # doing this in two steps as unmanaged models seem to have an
+                # issue immediately grabbing the primary key (id)
+                Project.objects.create(project=project)
+                project = Project.objects.get(project=project)
+                if verbose and project:
+                    print "** CREATED PROJECT FOR: %s (id:%d)" % (project.project, project.id)
+                return project
+            else:
+                return None
+        except Warning:
+            #TODO: use the default
+            pass
+    except Warning:
+        #TODO: use the default
+        pass
 
 @cache
 def lookup_squidhost(hostname=None, default="unknown", create=True, verbose=False):
@@ -170,13 +191,20 @@ def lookup_squidhost(hostname=None, default="unknown", create=True, verbose=Fals
         squid = SquidHost.objects.get(hostname=hostname)
         return squid
     except SquidHost.DoesNotExist:
-        if create:
-            # doing this in two steps as unmanaged models seem to have an
-            # issue immediately grabbing the primary key (id)
-            SquidHost.objects.create(hostname=hostname)
-            squid = SquidHost.objects.get(hostname=hostname)
-            if verbose and squid:
-                print "** CREATED SQUID HOST FOR: %s (id:%d)" % (squid.hostname, squid.id)
-            return squid
-        else:
-            return None
+        try:
+            if create:
+                # doing this in two steps as unmanaged models seem to have an
+                # issue immediately grabbing the primary key (id)
+                SquidHost.objects.create(hostname=hostname)
+                squid = SquidHost.objects.get(hostname=hostname)
+                if verbose and squid:
+                    print "** CREATED SQUID HOST FOR: %s (id:%d)" % (squid.hostname, squid.id)
+                return squid
+            else:
+                return None
+        except Warning:
+            #TODO: use the default
+            pass
+    except Warning:
+        #TODO: use the default
+        pass
