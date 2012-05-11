@@ -146,6 +146,7 @@ landingpages = [
                   | WMF                 # eg WMFJA085
                   | Donate              # old forms, keeping so that we can possibly redirect them all
                   | Support_Wikipedia   # old forms
+                  | Test_120511         # Test from 2012-05-11
                 )
                 (?:(?!\?|&)[\S])*         # this will give us the landing page up to the next ? or &
             )
