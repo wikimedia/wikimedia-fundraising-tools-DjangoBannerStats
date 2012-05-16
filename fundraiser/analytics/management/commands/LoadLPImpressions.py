@@ -1,14 +1,18 @@
 from django.core.management.base import BaseCommand
 from django.db import connections, transaction
+from django.db.utils import IntegrityError
 
 from datetime import datetime
+import gzip
 import MySQLdb
 from optparse import make_option
 import os
+import traceback
+from urllib import unquote
 import urlparse
-from django.db.utils import IntegrityError
 
 from fundraiser.analytics.functions import *
+from fundraiser.analytics.models import *
 from fundraiser.analytics.regex import *
 
 class Command(BaseCommand):
@@ -31,6 +35,13 @@ class Command(BaseCommand):
         )
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
+    squid_sql = "INSERT INTO `squidrecord` (squid_id, sequence, timestamp) VALUES %s"
+    impression_sql = "INSERT INTO `landingpageimpression_raw` (timestamp, utm_source, utm_campaign, utm_medium, landingpage, project_id, language_id, country_id) VALUES %s"
+
+    pending_squids = []
+    pending_impressions = []
+
+    debug_info = []
 
     def handle(self, *args, **options):
         try:
@@ -50,37 +61,49 @@ class Command(BaseCommand):
                     subfile = os.path.join(filename,f)
 
                     if not os.path.isdir(subfile):
-                        m, n, i = self.process_file(subfile)
-                        self.matched += m
-                        self.nomatched += n
-                        self.ignored += i
+                        results = self.process_file(subfile)
+                        self.matched += results["squid"]["match"]
+                        self.nomatched += results["squid"]["nomatch"]
 
-#                        if n == 0:
-#                            os.renames(subfile, os.path.join(filename, 'processed', f))
+#                        os.renames(subfile, os.path.join(filename, 'processed', f))
 
-                        if n == -1:
-                            break
-
-                        print "DONE - %d OKAY / %d FAILED (IGNORED: %d) - %s" % (m, n, i, subfile)
+                        print "DONE - %s" % subfile
+                        print "\tSQUID: %d OKAY / %d FAILED" % (
+                            int(results["squid"]["match"]),
+                            int(results["squid"]["nomatch"])
+                        )
+                        print "\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
+                            results["impression"]["match"],
+                            results["impression"]["nomatch"],
+                            results["impression"]["ignored"],
+                            results["impression"]["error"],
+                        )
             else:
-                m, n, i = self.process_file(filename)
+                results = self.process_file(filename)
 
-                self.matched += m
-                self.nomatched += n
-                self.ignored += i
+                self.matched += results["squid"]["match"]
+                self.nomatched += results["squid"]["nomatch"]
 
-#                if n == 0:
-#                    os.renames(subfile, os.path.join(filename, 'processed', f))
+#                os.renames(filename, os.path.join(filename, 'processed', f))
 
-                print "DONE - %d OKAY / %d FAILED (IGNORED: %d) - %s" % (m, n, i, filename)
+                print "DONE - %s" % filename
+                print "\tSQUID: %d OKAY / %d FAILED" % (
+                    int(results["squid"]["match"]),
+                    int(results["squid"]["nomatch"])
+                )
+                print "\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
+                    results["impression"]["match"],
+                    results["impression"]["nomatch"],
+                    results["impression"]["ignored"],
+                    results["impression"]["error"],
+                )
 
             endtime = datetime.now()
             print "DONE"
-            print "Total matched: %d" % self.matched
-            print "Total not matched: %d" % self.nomatched
+            print "Total squid matched: %d" % self.matched
+            print "Total squid not matched: %d" % self.nomatched
             print "Finished in %d.%d seconds" % ((endtime - starttime).seconds, (endtime - starttime).microseconds)
         except Exception as e:
-            import traceback
             traceback.print_exc()
             print e
 
@@ -96,59 +119,60 @@ class Command(BaseCommand):
 
         print "Processing %s" % filename
 
-        matched = 0
-        nomatched = 0
-        ignored = 0
+        results = {
+            "squid" : {
+                "match" : 0,
+                "nomatch" : 0
+            },
+            "impression" : {
+                "match" : 0,
+                "nomatch" : 0,
+                "ignored" : 0,
+                "error" : 0
+            }
+        }
 
-        batch_size = 10
-        batch_models = []
+        batch_size = 30
 
-        with open(filename, 'r') as file:
-            for l in file:
-
+        with gzip.open(filename, 'rb') as file:
+            for i, l in enumerate(file):
                 try:
-
                     m = squidline.match(l)
                     if not m:
                         # TODO: do we want to write the failed lines to another file for reprocessing?
-                        nomatched += 1
-                        if self.debug:
-                            print "NO MATCH - %s" % l
+                        results["squid"]["nomatch"] += 1
                         if self.verbose:
-                            if nomatched < 100:
+                            if results["squid"]["nomatch"] < 100:
                                 print "*** NO MATCH FOR LANDING PAGE IMPRESSION ***"
-                                print l,
+                                print "--- File: %s | Line: %d ---" % (filename, i+1)
+                                print l[:500],
+                                if len(l) > 500:
+                                    print "...TRUNCATED..."
                                 print "*** END OF NO MATCH ***"
                     else:
-                        matched += 1
-
-                        # FOR DEBUG ONLY TO SEE IF WE ARE MATCHING EVERYTHING WE WANT
-#                        ignore = False
-                        #check to see if we want this impression
-#                        for r in landingpages_ignore:
-#                            if r.match(m.group("url")):
-#                                ignore = True
-#                                break
-#                        if ignore:
-#                            ignored += 1
-#                            continue
+                        results["squid"]["match"] += 1
 
                         record = False
 
+                        url_uni = unquote(m.group("url"))
+                        while unquote(url_uni) != url_uni:
+                            url_uni = unquote(url_uni)
+
+                        url_uni = unicode(url_uni, 'latin_1').encode('utf-8')
+
                         # check the landing page patterns
                         for r in landingpages:
-                            record = r.match(m.group("url"))
+                            record = r.match(url_uni)
                             if record:
-#                                print m.group("url")
+                                results["impression"]["match"] += 1
                                 break
 
                         if not record:
-                            ignored += 1
-#                            print "NOT IGNORED & NOT MATCHED: %s" % m.group("url")
+                            results["impression"]["nomatch"] += 1
                             continue
 
                         # go ahead and parse the URL
-                        url = urlparse.urlparse(m.group("url"))
+                        url = urlparse.urlparse(url_uni)
                         qs = urlparse.parse_qs(url.query, keep_blank_values=True)
 
                         # grab the tracking information that should be common to any LP
@@ -168,11 +192,18 @@ class Command(BaseCommand):
                         country = None
                         project = None
 
+                        self.debug_info = []
+
                         if record.group("sitename") == "wikimediafoundation.org":
                             project = lookup_project("foundationwiki")
 
+                            self.debug_info.append(record.group("landingpage"))
+                            self.debug_info.append(unquote(record.group("landingpage")))
+
                             split = record.group("landingpage").rsplit('/', 2)
                             lang, coun = ('','')
+
+                            self.debug_info.append(split)
 
                             if len(split) == 3:
                                 landingpage, lang, coun = split
@@ -180,15 +211,19 @@ class Command(BaseCommand):
                                 landingpage, lang = split
                                 coun = 'XX'
                             elif len(split) == 1:
-                                landingpage = split
+                                landingpage = split[0]
                                 coun = 'XX'
                                 lang = 'en'
                             else:
                                 # uh oh, TODO: do something informative
                                 pass
 
+
+                            self.debug_info.append("LP: %s" % landingpage)
+
                             # deal with the payment-processing chapters and their pages
                             if lang in ('CH','DE','GB','FR'):
+                                # the language and country are backwards
                                 language = lookup_language(coun)
                                 country = lookup_country(lang)
                             else:
@@ -225,33 +260,82 @@ class Command(BaseCommand):
                             country = lookup_language(flp_vars["country"])
 
                         else:
-                            # TODO: we have a weird problem, do something
-                            pass
+                            results["impression"]["error"] += 1
+                            print "*** INVALID DOMAIN FOR LANDING PAGE IMPRESSION ***"
+                            print "--- File: %s | Line: %d ---" % (filename, i+1)
+                            print m.group("url")[:200]
+                            if len(m.group("url")) > 200:
+                                print "...TRUNCATED..."
+                            print "*** END ***"
+                            continue
 
                         if landingpage is "" or language is None or country is None or project is None:
                             # something odd does not quite match in this request
-                            # TODO: do something informative
-                            print m.group("url")
+                            results["impression"]["error"] += 1
+                            print "*** NOT ALL VARIABLES CAPTURED FOR LANDING PAGE IMPRESSION ***"
+                            print "--- File: %s | Line: %d ---" % (filename, i+1)
+                            print m.group("url")[:200]
+                            if len(m.group("url")) > 200:
+                                print "...TRUNCATED..."
+                            print "*** END ***"
                             continue
+
+                        # Truncate the landing page name if it longer than supported by the database
+                        # Don't lookup the attribute the vase majority of the time
+                        if len(landingpage) > 50:
+                            lp_max = LandingPageImpression._meta.get_field('landing_page').max_length
+                            if len(landingpage) > lp_max:
+                                landingpage = landingpage[:lp_max]
 
                         squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
                         seq = int(m.group("sequence"))
                         timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
 
                         # not using the models here saves a lot of wall time
-                        batch_models.append((
-                            (squid.id, seq, timestamp.strftime("%Y-%m-%d %H:%M:%S")),
-                            (timestamp.strftime("%Y-%m-%d %H:%M:%S"), utm_source,
-                                utm_campaign, utm_medium, landingpage, project.id,
-                                language.id, country.id)
-                        ))
+                        try:
+                            sq_tmp = "(%s, %s, '%s')" % (
+                                MySQLdb.escape_string(str(squid.id)),
+                                MySQLdb.escape_string(str(seq)),
+                                MySQLdb.escape_string(str(timestamp.strftime("%Y-%m-%d %H:%M:%S")))
+                            )
+                            lp_tmp = "('%s', '%s', '%s', '%s', '%s', %s, %s, %s)" % (
+                                MySQLdb.escape_string(str(timestamp.strftime("%Y-%m-%d %H:%M:%S"))),
+                                MySQLdb.escape_string(utm_source),
+                                MySQLdb.escape_string(utm_campaign),
+                                MySQLdb.escape_string(utm_medium),
+                                MySQLdb.escape_string(landingpage),
+                                MySQLdb.escape_string(str(project.id)),
+                                MySQLdb.escape_string(str(language.id)),
+                                MySQLdb.escape_string(str(country.id))
+                            )
+                            self.pending_squids.append(sq_tmp)
+                            self.pending_impressions.append(lp_tmp)
+
+                        except Exception as e:
+                            results["impression"]["error"] += 1
+                            print "** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **"
+                            traceback.print_exc()
+                            print e
+                            print "******************************************"
+                            print l
+                            print "******************************************"
+
+                        finally:
+                            sq_tmp = ""
+                            lp_tmp = ""
 
                         # write the models in batch
-                        if len(batch_models) % batch_size == 0:
-                            self.write(batch_models)
-                            batch_models = []
+                        if len(self.pending_squids) % batch_size == 0:
+                            try:
+                                self.write(self.pending_squids, self.pending_impressions)
+                            except Exception:
+                                traceback.print_exc()
+                            finally:
+                                self.pending_squids = []
+                                self.pending_impressions = []
+
                 except Exception as e:
-                    import traceback
+                    results["impression"]["error"] += 1
                     print "** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **"
                     traceback.print_exc()
                     print e
@@ -259,22 +343,22 @@ class Command(BaseCommand):
                     print l
                     print "******************************************"
 
-
             try:
-                # write out any remaining in the list
-                self.write(batch_models)
-                batch_models = []
+                # write out any remaining records
+                self.write(self.pending_squids, self.pending_impressions)
+                self.pending_squids = []
+                self.pending_impressions = []
+
             except Exception as e:
-                import traceback
                 print "** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **"
                 traceback.print_exc()
                 print e
                 print "******************************************"
 
-        return matched, nomatched, ignored
+        return results
 
     @transaction.commit_manually
-    def write(self, list):
+    def write(self, squids, impressions):
         """
         Commits a batch of transactions. Attempts a single query per model by splitting the
         tuples of each banner impression and grouping by model.  If that fails, the function
@@ -282,64 +366,47 @@ class Command(BaseCommand):
         """
         cursor = connections['default'].cursor()
 
-        squid_sql = "INSERT INTO `squidrecord` (squid_id, sequence, timestamp) VALUES %s"
-        lp_sql = "INSERT INTO `landingpageimpression_raw` (timestamp, utm_source, utm_campaign, utm_medium, landingpage, project_id, language_id, country_id) VALUES %s"
+        s_len = len(squids)
+        i_len = len(impressions)
 
-        squid_values = []
-        lp_values = []
+        print "** %d - %d **" % (s_len, i_len)
+
+        if s_len != i_len:
+            raise Exception("Length mismatch between squid records and landing page impressions")
+
+        if not s_len:
+            return
 
         try:
-            for s,b in list:
-                squid_values.append(
-                    "(%s, %s, '%s')" % (
-                        MySQLdb.escape_string(str(s[0])),
-                        MySQLdb.escape_string(str(s[1])),
-                        MySQLdb.escape_string(str(s[2]))
-                    )
-                )
-                lp_values.append(
-                    "('%s', '%s', '%s', '%s', '%s', %s, %s, %s)"% (
-                        MySQLdb.escape_string(str(b[0])),
-                        MySQLdb.escape_string(str(b[1])),
-                        MySQLdb.escape_string(str(b[2])),
-                        MySQLdb.escape_string(str(b[3])),
-                        MySQLdb.escape_string(str(b[4])),
-                        MySQLdb.escape_string(str(b[5])),
-                        MySQLdb.escape_string(str(b[6])),
-                        MySQLdb.escape_string(str(b[7]))
-                    )
-                )
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            print e
-            print "UNHANDLED EXCEPTION"
-        try:
-            if len(squid_values) > 0 and len(lp_values) > 0:
             # attempt to create all in batches
-                cursor.execute(squid_sql % ', '.join(squid_values))
-                cursor.execute(lp_sql % ', '.join(lp_values))
-                transaction.commit('default')
-                return
-            transaction.rollback('default')
-        except IntegrityError:
+            cursor.execute(self.squid_sql % ', '.join(squids))
+            cursor.execute(self.impression_sql % ', '.join(impressions))
+
+            transaction.commit('default')
+
+        except IntegrityError as e:
             # someone was not happy, likely a SquidRecord
-            # TODO: break the batch into smaller batches and retry
             transaction.rollback('default')
-            if len(list) > 1:
-                for l in list:
-                    self.write([l])
-        except TypeError:
-            # this seems to happen when lp_values is empty
-            # TODO: fix that
-            transaction.rollback('default')
+
+            print e
+
+            if s_len == 1 or i_len == 1:
+                return
+
+            for i in range(s_len):
+                self.write([squids[i]], [impressions[i]])
+
         except Exception as e:
-            import traceback
+            transaction.rollback()
+
             traceback.print_exc()
             print e
+
+            print self.squid_sql % ', '.join(squids)
+            print self.impression_sql % ', '.join(impressions)
+
+            for r in self.debug_info:
+                print "\t",
+                print r
+
             print "UNHANDLED EXCEPTION"
-            transaction.rollback()
-            if len(list) > 1:
-                for l in list:
-                    self.write([l])
-        transaction.rollback('default')
