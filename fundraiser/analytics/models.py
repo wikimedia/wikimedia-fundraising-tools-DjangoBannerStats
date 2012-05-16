@@ -92,3 +92,24 @@ class LandingPageImpression(models.Model):
     project = models.ForeignKey(Project, null=True)
     language = models.ForeignKey(Language, null=True)
     country = models.ForeignKey(Country, null=True)
+
+    class Meta:
+        db_table = 'landingpageimpression_raw'
+        managed = False
+
+class LandingPageImpressions(models.Model):
+    ""
+    id = models.IntegerField(primary_key=True)
+    timestamp = models.DateTimeField(auto_now_add=False)
+    utm_source = models.CharField(max_length=255)
+    utm_campaign = models.CharField(max_length=255)
+    utm_medium = models.CharField(max_length=255)
+    landing_page = models.CharField(max_length=255)
+    project = models.ForeignKey(Project, null=True)
+    language = models.ForeignKey(Language, null=True)
+    country = models.ForeignKey(Country, null=True)
+    count = models.IntegerField()
+
+    class Meta:
+        db_table = 'landingpageimpressions'
+        managed = False
