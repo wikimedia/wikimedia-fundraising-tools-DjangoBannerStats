@@ -375,8 +375,6 @@ class Command(BaseCommand):
         s_len = len(squids)
         i_len = len(impressions)
 
-        print "** %d - %d **" % (s_len, i_len)
-
         if s_len != i_len:
             raise Exception("Length mismatch between squid records and landing page impressions")
 
@@ -393,8 +391,6 @@ class Command(BaseCommand):
         except IntegrityError as e:
             # someone was not happy, likely a SquidRecord
             transaction.rollback('default')
-
-            print e
 
             if s_len == 1 or i_len == 1:
                 return
