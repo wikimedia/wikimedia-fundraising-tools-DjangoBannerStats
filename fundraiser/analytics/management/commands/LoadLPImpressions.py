@@ -132,7 +132,7 @@ class Command(BaseCommand):
             }
         }
 
-        batch_size = 30
+        batch_size = 1500
 
         file = gzip.open(filename, 'rb')
         try:
