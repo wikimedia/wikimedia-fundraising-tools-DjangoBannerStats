@@ -24,9 +24,9 @@ squidline = re.compile(
         (?P<squidhierarchy>[\S]+) # Squid hierarchy status, peer IP
         (\s)
         (?P<mime>[\S]+) # MIME content type
-        ([\s]+)
+        (\s)
         (?P<referrer>[\S]+) # Referer header
-        ([\s]+)
+        (\s)
         (?P<xff>[\S]+) # X-Forwarded-For header
         (\s)
         (?P<useragent>[\S\s]+) # User-Agent header
