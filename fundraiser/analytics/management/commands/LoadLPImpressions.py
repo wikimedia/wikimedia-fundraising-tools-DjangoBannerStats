@@ -134,7 +134,9 @@ class Command(BaseCommand):
 
         batch_size = 30
 
-        with gzip.open(filename, 'rb') as file:
+        file = gzip.open(filename, 'rb')
+        try:
+#        with gzip.open(filename, 'rb') as file: # incompatible with python2.6
             for i, l in enumerate(file):
                 try:
                     m = squidline.match(l)
@@ -354,6 +356,10 @@ class Command(BaseCommand):
                 traceback.print_exc()
                 print e
                 print "******************************************"
+        except IOError:
+            pass
+        finally:
+            file.close()
 
         return results
 
