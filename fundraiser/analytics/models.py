@@ -1,5 +1,18 @@
 from django.db import models
 
+class SquidLog(models.Model):
+    ""
+    id = models.IntegerField(primary_key=True)
+    filename = models.CharField(max_length=255)
+    squidtype = models.CharField(max_length=255)
+    timestamp = models.DateTimeField(auto_now_add=False)
+
+    class Meta:
+        db_table = "squidlog"
+        managed = False
+
+    def __unicode__(self):
+        return self.filename
 
 class SquidHost(models.Model):
     "Lookup table for squid hostnames"
