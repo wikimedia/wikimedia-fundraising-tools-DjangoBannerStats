@@ -4,6 +4,7 @@ from django.db.utils import IntegrityError
 
 from datetime import datetime
 import gzip
+import logging
 import MySQLdb
 from optparse import make_option
 import os
@@ -16,6 +17,8 @@ from fundraiser.analytics.models import *
 from fundraiser.analytics.regex import *
 
 class Command(BaseCommand):
+
+    logger = logging.getLogger("fundraiser.analytics.load_lps")
 
     option_list = BaseCommand.option_list + (
         make_option('-f', '--file',
@@ -55,7 +58,7 @@ class Command(BaseCommand):
             self.ignored = 0
 
             if os.path.isdir(filename):
-                print "Processing directory"
+                self.logger.info("Processing directory")
                 for f in os.listdir(filename):
 
                     subfile = os.path.join(filename,f)
@@ -67,17 +70,17 @@ class Command(BaseCommand):
 
 #                        os.renames(subfile, os.path.join(filename, 'processed', f))
 
-                        print "DONE - %s" % subfile
-                        print "\tSQUID: %d OKAY / %d FAILED" % (
+                        self.logger.info("DONE - %s" % subfile)
+                        self.logger.info("\tSQUID: %d OKAY / %d FAILED" % (
                             int(results["squid"]["match"]),
                             int(results["squid"]["nomatch"])
-                        )
-                        print "\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
+                        ))
+                        self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
                             results["impression"]["match"],
                             results["impression"]["nomatch"],
                             results["impression"]["ignored"],
                             results["impression"]["error"],
-                        )
+                        ))
             else:
                 results = self.process_file(filename)
 
@@ -86,38 +89,37 @@ class Command(BaseCommand):
 
 #                os.renames(filename, os.path.join(filename, 'processed', f))
 
-                print "DONE - %s" % filename
-                print "\tSQUID: %d OKAY / %d FAILED" % (
+                self.logger.info("DONE - %s" % filename)
+                self.logger.info("\tSQUID: %d OKAY / %d FAILED" % (
                     int(results["squid"]["match"]),
                     int(results["squid"]["nomatch"])
-                )
-                print "\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
+                ))
+                self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
                     results["impression"]["match"],
                     results["impression"]["nomatch"],
                     results["impression"]["ignored"],
                     results["impression"]["error"],
-                )
+                ))
 
             endtime = datetime.now()
-            print "DONE"
-            print "Total squid matched: %d" % self.matched
-            print "Total squid not matched: %d" % self.nomatched
-            print "Finished in %d.%d seconds" % ((endtime - starttime).seconds, (endtime - starttime).microseconds)
-        except Exception as e:
-            traceback.print_exc()
-            print e
+            self.logger.info("DONE")
+            self.logger.info("Total squid matched: %d" % self.matched)
+            self.logger.info("Total squid not matched: %d" % self.nomatched)
+            self.logger.info("Finished in %d.%d seconds" % ((endtime - starttime).seconds, (endtime - starttime).microseconds))
+        except Exception:
+            self.logger.exception()
 
 
     def process_file(self, filename=None):
         if filename is None:
-            print "Error loading landing page impressions - No file specified"
+            self.logger.error("Error loading landing page impressions - No file specified")
             return
 
         if not os.path.exists(filename):
-            print "Error loading landing page impressions - File %s does not exist" % filename
+            self.logger.error("Error loading landing page impressions - File %s does not exist" % filename)
             return
 
-        print "Processing %s" % filename
+        self.logger.info("Processing %s" % filename)
 
         results = {
             "squid" : {
@@ -145,12 +147,12 @@ class Command(BaseCommand):
                         results["squid"]["nomatch"] += 1
                         if self.verbose:
                             if results["squid"]["nomatch"] < 100:
-                                print "*** NO MATCH FOR LANDING PAGE IMPRESSION ***"
-                                print "--- File: %s | Line: %d ---" % (filename, i+1)
-                                print l[:500],
+                                self.logger.info("*** NO MATCH FOR LANDING PAGE IMPRESSION ***")
+                                self.logger.info("--- File: %s | Line: %d ---" % (filename, i+1))
+                                self.logger.info(l[:500])
                                 if len(l) > 500:
-                                    print "...TRUNCATED..."
-                                print "*** END OF NO MATCH ***"
+                                    self.logger.info("...TRUNCATED...")
+                                self.logger.info("*** END OF NO MATCH ***")
                     else:
                         results["squid"]["match"] += 1
 
@@ -263,23 +265,23 @@ class Command(BaseCommand):
 
                         else:
                             results["impression"]["error"] += 1
-                            print "*** INVALID DOMAIN FOR LANDING PAGE IMPRESSION ***"
-                            print "--- File: %s | Line: %d ---" % (filename, i+1)
-                            print m.group("url")[:200]
+                            self.logger.info("*** INVALID DOMAIN FOR LANDING PAGE IMPRESSION ***")
+                            self.logger.info("--- File: %s | Line: %d ---" % (filename, i+1))
+                            self.logger.info(m.group("url")[:200])
                             if len(m.group("url")) > 200:
-                                print "...TRUNCATED..."
-                            print "*** END ***"
+                                self.logger.info("...TRUNCATED...")
+                            self.logger.info("*** END ***")
                             continue
 
                         if landingpage is "" or language is None or country is None or project is None:
                             # something odd does not quite match in this request
                             results["impression"]["error"] += 1
-                            print "*** NOT ALL VARIABLES CAPTURED FOR LANDING PAGE IMPRESSION ***"
-                            print "--- File: %s | Line: %d ---" % (filename, i+1)
-                            print m.group("url")[:200]
+                            self.logger.info("*** NOT ALL VARIABLES CAPTURED FOR LANDING PAGE IMPRESSION ***")
+                            self.logger.info("--- File: %s | Line: %d ---" % (filename, i+1))
+                            self.logger.info(m.group("url")[:200])
                             if len(m.group("url")) > 200:
-                                print "...TRUNCATED..."
-                            print "*** END ***"
+                                self.logger.info("...TRUNCATED...")
+                            self.logger.info("*** END ***")
                             continue
 
                         # Truncate the landing page name if it longer than supported by the database
@@ -313,14 +315,10 @@ class Command(BaseCommand):
                             self.pending_squids.append(sq_tmp)
                             self.pending_impressions.append(lp_tmp)
 
-                        except Exception as e:
+                        except Exception:
                             results["impression"]["error"] += 1
-                            print "** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **"
-                            traceback.print_exc()
-                            print e
-                            print "******************************************"
-                            print l
-                            print "******************************************"
+                            self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
+                            self.logger.error("********************\n%s\n********************" % l)
 
                         finally:
                             sq_tmp = ""
@@ -331,19 +329,15 @@ class Command(BaseCommand):
                             try:
                                 self.write(self.pending_squids, self.pending_impressions)
                             except Exception:
-                                traceback.print_exc()
+                                self.logger.exception("Error writing impressions to the database")
                             finally:
                                 self.pending_squids = []
                                 self.pending_impressions = []
 
                 except Exception as e:
                     results["impression"]["error"] += 1
-                    print "** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **"
-                    traceback.print_exc()
-                    print e
-                    print "******************************************"
-                    print l
-                    print "******************************************"
+                    self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
+                    self.logger.error("********************\n%s\n********************" % l)
 
             try:
                 # write out any remaining records
@@ -352,10 +346,9 @@ class Command(BaseCommand):
                 self.pending_impressions = []
 
             except Exception as e:
-                print "** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **"
-                traceback.print_exc()
-                print e
-                print "******************************************"
+                self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
+                self.logger.error("********************")
+
         except IOError:
             pass
         finally:
@@ -401,14 +394,11 @@ class Command(BaseCommand):
         except Exception as e:
             transaction.rollback()
 
-            traceback.print_exc()
-            print e
+            self.logger.exception("UNHANDLED EXCEPTION")
 
-            print self.squid_sql % ', '.join(squids)
-            print self.impression_sql % ', '.join(impressions)
+            if self.debug:
+                self.logger.info(self.squid_sql % ', '.join(squids))
+                self.logger.info(self.impression_sql % ', '.join(impressions))
 
-            for r in self.debug_info:
-                print "\t",
-                print r
-
-            print "UNHANDLED EXCEPTION"
+                for r in self.debug_info:
+                    self.logger.info("\t%s" % r)

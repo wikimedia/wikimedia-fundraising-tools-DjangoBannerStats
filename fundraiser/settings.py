@@ -140,6 +140,10 @@ LOGGING = {
         }
     },
     'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler'
+        },
         'mail_admins': {
             'level': 'ERROR',
             'filters': ['require_debug_false'],
@@ -152,6 +156,10 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': True,
         },
+        'fundraiser': {
+            'handlers': ['console'],
+            'level': 'DEBUG'
+        }
     }
 }
 
