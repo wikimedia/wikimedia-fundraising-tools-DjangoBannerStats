@@ -64,6 +64,11 @@ class Command(BaseCommand):
                     subfile = os.path.join(filename,f)
 
                     if not os.path.isdir(subfile):
+                        existing = SquidLog.objects.filter(filename=subfile)
+                        if existing:
+                            self.logger.debug("Already processed %d  - skipping" % subfile)
+                            continue
+
                         results = self.process_file(subfile)
                         self.matched += results["squid"]["match"]
                         self.nomatched += results["squid"]["nomatch"]
@@ -82,6 +87,11 @@ class Command(BaseCommand):
                             results["impression"]["error"],
                         ))
             else:
+                existing = SquidLog.objects.filter(filename=filename)
+                if existing:
+                    self.logger.debug("Already processed %d  - skipping" % filename)
+                    return
+
                 results = self.process_file(filename)
 
                 self.matched += results["squid"]["match"]
