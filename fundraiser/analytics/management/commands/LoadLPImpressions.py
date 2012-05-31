@@ -126,7 +126,7 @@ class Command(BaseCommand):
             self.logger.info("Total squid not matched: %d" % self.nomatched)
             self.logger.info("Finished in %d.%d seconds" % ((endtime - starttime).seconds, (endtime - starttime).microseconds))
         except Exception:
-            self.logger.exception()
+            self.logger.exception("Error processing files")
 
 
     def process_file(self, filename=None):
