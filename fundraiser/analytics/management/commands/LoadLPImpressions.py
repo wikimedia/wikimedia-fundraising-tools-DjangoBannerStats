@@ -39,7 +39,7 @@ class Command(BaseCommand):
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
     squid_sql = "INSERT INTO `squidrecord` (squid_id, sequence, timestamp) VALUES %s"
-    impression_sql = "INSERT INTO `landingpageimpression_raw` (timestamp, utm_source, utm_campaign, utm_medium, landingpage, project_id, language_id, country_id) VALUES %s"
+    impression_sql = "INSERT INTO `landingpageimpression_raw` (timestamp, utm_source, utm_campaign, utm_key, utm_medium, landingpage, project_id, language_id, country_id) VALUES %s"
 
     pending_squids = []
     pending_impressions = []
@@ -70,6 +70,11 @@ class Command(BaseCommand):
                             continue
 
                         results = self.process_file(subfile)
+
+#                        sq = SquidLog(filename=subfile, impressiontype="landingpage")
+#                        sq.timestamp = sq.filename2timestamp()
+#                        sq.save()
+
                         self.matched += results["squid"]["match"]
                         self.nomatched += results["squid"]["nomatch"]
 
@@ -96,6 +101,10 @@ class Command(BaseCommand):
 
                 self.matched += results["squid"]["match"]
                 self.nomatched += results["squid"]["nomatch"]
+
+#                sq = SquidLog(filename=filename, impressiontype="landingpage")
+#                sq.timestamp = sq.filename2timestamp()
+#                sq.save()
 
 #                os.renames(filename, os.path.join(filename, 'processed', f))
 
@@ -193,6 +202,7 @@ class Command(BaseCommand):
                         utm_source = ""
                         utm_campaign = ""
                         utm_medium = ""
+                        utm_key = ""
 
                         if "utm_source" in qs:
                             utm_source = qs["utm_source"][0]
@@ -200,6 +210,8 @@ class Command(BaseCommand):
                             utm_campaign = qs["utm_campaign"][0]
                         if "utm_medium" in qs:
                             utm_medium = qs["utm_medium"][0]
+                        if "utm_key" in qs:
+                            utm_key = qs["utm_key"][0]
 
                         landingpage = ""
                         language = None
@@ -312,10 +324,11 @@ class Command(BaseCommand):
                                 MySQLdb.escape_string(str(seq)),
                                 MySQLdb.escape_string(str(timestamp.strftime("%Y-%m-%d %H:%M:%S")))
                             )
-                            lp_tmp = "('%s', '%s', '%s', '%s', '%s', %s, %s, %s)" % (
+                            lp_tmp = "('%s', '%s', '%s', '%s', '%s', '%s', %s, %s, %s)" % (
                                 MySQLdb.escape_string(str(timestamp.strftime("%Y-%m-%d %H:%M:%S"))),
                                 MySQLdb.escape_string(utm_source),
                                 MySQLdb.escape_string(utm_campaign),
+                                MySQLdb.escape_string(utm_key),
                                 MySQLdb.escape_string(utm_medium),
                                 MySQLdb.escape_string(landingpage),
                                 MySQLdb.escape_string(str(project.id)),

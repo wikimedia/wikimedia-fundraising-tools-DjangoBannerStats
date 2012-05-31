@@ -3,8 +3,8 @@ from django.db import models
 class SquidLog(models.Model):
     ""
     id = models.IntegerField(primary_key=True)
-    filename = models.CharField(max_length=255)
-    squidtype = models.CharField(max_length=255)
+    filename = models.CharField(max_length=128)
+    impressiontype = models.CharField(max_length=128)
     timestamp = models.DateTimeField(auto_now_add=False)
 
     class Meta:
@@ -13,6 +13,12 @@ class SquidLog(models.Model):
 
     def __unicode__(self):
         return self.filename
+
+    def filename2timestamp(self):
+        import datetime
+        filename_trimmed = self.filename.lower().rstrip(".logz").lstrip("landigpges-")
+        ts = datetime.datetime.strptime(filename_trimmed, "%Y-%m-%d-%I%p--%M")
+        return ts
 
 class SquidHost(models.Model):
     "Lookup table for squid hostnames"
@@ -100,6 +106,7 @@ class LandingPageImpression(models.Model):
     timestamp = models.DateTimeField(auto_now_add=False)
     utm_source = models.CharField(max_length=255)
     utm_campaign = models.CharField(max_length=255)
+    utm_key = models.CharField(max_length=128)
     utm_medium = models.CharField(max_length=255)
     landing_page = models.CharField(max_length=255)
     project = models.ForeignKey(Project, null=True)
