@@ -71,9 +71,9 @@ class Command(BaseCommand):
 
                         results = self.process_file(subfile)
 
-#                        sq = SquidLog(filename=subfile, impressiontype="landingpage")
-#                        sq.timestamp = sq.filename2timestamp()
-#                        sq.save()
+                        sq = SquidLog(filename=subfile, impressiontype="landingpage")
+                        sq.timestamp = sq.filename2timestamp()
+                        sq.save()
 
                         self.matched += results["squid"]["match"]
                         self.nomatched += results["squid"]["nomatch"]
@@ -102,9 +102,9 @@ class Command(BaseCommand):
                 self.matched += results["squid"]["match"]
                 self.nomatched += results["squid"]["nomatch"]
 
-#                sq = SquidLog(filename=filename, impressiontype="landingpage")
-#                sq.timestamp = sq.filename2timestamp()
-#                sq.save()
+                sq = SquidLog(filename=filename, impressiontype="landingpage")
+                sq.timestamp = sq.filename2timestamp()
+                sq.save()
 
 #                os.renames(filename, os.path.join(filename, 'processed', f))
 
