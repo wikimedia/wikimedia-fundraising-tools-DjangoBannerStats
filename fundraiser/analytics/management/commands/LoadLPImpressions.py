@@ -71,7 +71,7 @@ class Command(BaseCommand):
 
                         results = self.process_file(subfile)
 
-                        path, filename_only = subfile.rsplit('/', maxsplit=1)
+                        path, filename_only = subfile.rsplit('/', 1)
                         sq = SquidLog(filename=filename_only, impressiontype="landingpage")
                         sq.timestamp = sq.filename2timestamp()
                         sq.save()
@@ -103,7 +103,7 @@ class Command(BaseCommand):
                 self.matched += results["squid"]["match"]
                 self.nomatched += results["squid"]["nomatch"]
 
-                path, filename_only = filename.rsplit('/', maxsplit=1)
+                path, filename_only = filename.rsplit('/', 1)
                 sq = SquidLog(filename=filename_only, impressiontype="landingpage")
                 sq.timestamp = sq.filename2timestamp()
                 sq.save()
