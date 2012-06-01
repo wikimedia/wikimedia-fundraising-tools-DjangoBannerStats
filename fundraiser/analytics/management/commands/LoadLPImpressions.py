@@ -64,15 +64,14 @@ class Command(BaseCommand):
                     subfile = os.path.join(filename,f)
 
                     if not os.path.isdir(subfile):
-                        existing = SquidLog.objects.filter(filename=subfile)
+                        existing = SquidLog.objects.filter(filename=f)
                         if existing:
                             self.logger.debug("Already processed %d  - skipping" % subfile)
                             continue
 
                         results = self.process_file(subfile)
 
-                        path, filename_only = subfile.rsplit('/', 1)
-                        sq = SquidLog(filename=filename_only, impressiontype="landingpage")
+                        sq = SquidLog(filename=f, impressiontype="landingpage")
                         sq.timestamp = sq.filename2timestamp()
                         sq.save()
 
@@ -93,7 +92,8 @@ class Command(BaseCommand):
                             results["impression"]["error"],
                         ))
             else:
-                existing = SquidLog.objects.filter(filename=filename)
+                path, filename_only = filename.rsplit('/', 1)
+                existing = SquidLog.objects.filter(filename=filename_only)
                 if existing:
                     self.logger.debug("Already processed %d  - skipping" % filename)
                     return
@@ -103,7 +103,6 @@ class Command(BaseCommand):
                 self.matched += results["squid"]["match"]
                 self.nomatched += results["squid"]["nomatch"]
 
-                path, filename_only = filename.rsplit('/', 1)
                 sq = SquidLog(filename=filename_only, impressiontype="landingpage")
                 sq.timestamp = sq.filename2timestamp()
                 sq.save()
