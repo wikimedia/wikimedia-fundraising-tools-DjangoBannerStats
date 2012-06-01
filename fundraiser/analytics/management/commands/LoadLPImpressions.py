@@ -66,7 +66,7 @@ class Command(BaseCommand):
                     if not os.path.isdir(subfile):
                         existing = SquidLog.objects.filter(filename=f)
                         if existing:
-                            self.logger.debug("Already processed %d  - skipping" % subfile)
+                            self.logger.debug("Already processed %s  - skipping" % subfile)
                             continue
 
                         results = self.process_file(subfile)
@@ -95,7 +95,7 @@ class Command(BaseCommand):
                 path, filename_only = filename.rsplit('/', 1)
                 existing = SquidLog.objects.filter(filename=filename_only)
                 if existing:
-                    self.logger.debug("Already processed %d  - skipping" % filename)
+                    self.logger.debug("Already processed %s  - skipping" % filename)
                     return
 
                 results = self.process_file(filename)
