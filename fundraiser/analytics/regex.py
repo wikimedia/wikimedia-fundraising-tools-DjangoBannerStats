@@ -11,7 +11,7 @@ squidline = re.compile(
         (\s)
         (?P<servicetime>[0-9.]+) # Request service time
         (\s)
-        (?P<client>[0-9.]+) # Client IP address
+        (?P<client>[\S]+) # Client IP address
         (\s)
         (?P<squidstatus>[\S]+) # Squid request status and HTTP status code
         (\s)
