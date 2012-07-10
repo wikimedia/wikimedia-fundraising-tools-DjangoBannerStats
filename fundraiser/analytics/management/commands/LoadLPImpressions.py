@@ -3,6 +3,7 @@ from django.db import connections, transaction
 from django.db.utils import IntegrityError
 
 from datetime import datetime
+import glob
 import gzip
 import logging
 import MySQLdb
@@ -57,69 +58,43 @@ class Command(BaseCommand):
             self.nomatched = 0
             self.ignored = 0
 
+            files = []
             if os.path.isdir(filename):
                 self.logger.info("Processing directory")
-                for f in os.listdir(filename):
-
-                    subfile = os.path.join(filename,f)
-
-                    if not os.path.isdir(subfile):
-                        existing = SquidLog.objects.filter(filename=f)
-                        if existing:
-                            self.logger.debug("Already processed %s  - skipping" % subfile)
-                            continue
-
-                        results = self.process_file(subfile)
-
-                        sq = SquidLog(filename=f, impressiontype="landingpage")
-                        sq.timestamp = sq.filename2timestamp()
-                        sq.save()
-
-                        self.matched += results["squid"]["match"]
-                        self.nomatched += results["squid"]["nomatch"]
-
-#                        os.renames(subfile, os.path.join(filename, 'processed', f))
-
-                        self.logger.info("DONE - %s" % subfile)
-                        self.logger.info("\tSQUID: %d OKAY / %d FAILED" % (
-                            int(results["squid"]["match"]),
-                            int(results["squid"]["nomatch"])
-                        ))
-                        self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
-                            results["impression"]["match"],
-                            results["impression"]["nomatch"],
-                            results["impression"]["ignored"],
-                            results["impression"]["error"],
-                        ))
+                filename = filename.rstrip('/')
+                files = glob.glob("%s/*.gz" % filename)
             else:
-                path, filename_only = filename.rsplit('/', 1)
-                existing = SquidLog.objects.filter(filename=filename_only)
-                if existing:
-                    self.logger.debug("Already processed %s  - skipping" % filename)
-                    return
+                self.logger.info("Processing files matching %s" % filename)
+                files = glob.glob(filename)
 
-                results = self.process_file(filename)
+            for f in files:
+                path, filename_only = f.rsplit('/', 1)
+                if not os.path.isdir(f):
+                    existing = SquidLog.objects.filter(filename=filename_only)
+                    if existing:
+                        self.logger.debug("Already processed %s  - skipping" % f)
+                        continue
 
-                self.matched += results["squid"]["match"]
-                self.nomatched += results["squid"]["nomatch"]
+                    results = self.process_file(f)
 
-                sq = SquidLog(filename=filename_only, impressiontype="landingpage")
-                sq.timestamp = sq.filename2timestamp()
-                sq.save()
+                    sq = SquidLog(filename=filename_only, impressiontype="landingpage")
+                    sq.timestamp = sq.filename2timestamp()
+                    sq.save()
 
-#                os.renames(filename, os.path.join(filename, 'processed', f))
+                    self.matched += results["squid"]["match"]
+                    self.nomatched += results["squid"]["nomatch"]
 
-                self.logger.info("DONE - %s" % filename)
-                self.logger.info("\tSQUID: %d OKAY / %d FAILED" % (
-                    int(results["squid"]["match"]),
-                    int(results["squid"]["nomatch"])
-                ))
-                self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
-                    results["impression"]["match"],
-                    results["impression"]["nomatch"],
-                    results["impression"]["ignored"],
-                    results["impression"]["error"],
-                ))
+                    self.logger.info("DONE - %s" % f)
+                    self.logger.info("\tSQUID: %d OKAY / %d FAILED" % (
+                        int(results["squid"]["match"]),
+                        int(results["squid"]["nomatch"])
+                    ))
+                    self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
+                        results["impression"]["match"],
+                        results["impression"]["nomatch"],
+                        results["impression"]["ignored"],
+                        results["impression"]["error"],
+                    ))
 
             endtime = datetime.now()
             self.logger.info("DONE")
