@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from django.db import connections, transaction
 from django.db.utils import IntegrityError
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import glob
 import gzip
 import logging
@@ -16,6 +16,7 @@ import urlparse
 from fundraiser.analytics.functions import *
 from fundraiser.analytics.models import *
 from fundraiser.analytics.regex import *
+from fundraiser.settings import UDP_LOG_PATH
 
 class Command(BaseCommand):
 
@@ -36,6 +37,11 @@ class Command(BaseCommand):
             action='store_true',
             default=False,
             help='Do not save the impressions. Parse only.'),
+        make_option('', '--recent',
+            dest='recent',
+            action='store_true',
+            default=False,
+            help='Process recent logs.'),
         )
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
@@ -53,19 +59,27 @@ class Command(BaseCommand):
             filename = options.get('filename')
             self.debug = options.get('debug')
             self.verbose = options.get('verbose')
+            recent = options.get('recent')
 
             self.matched = 0
             self.nomatched = 0
             self.ignored = 0
 
             files = []
-            if os.path.isdir(filename):
-                self.logger.info("Processing directory")
-                filename = filename.rstrip('/')
-                files = glob.glob("%s/*.gz" % filename)
+            if recent:
+                now = "landingpages-%s*" % datetime.now().strftime("%Y-%m-%d-%I%p")
+                pasthour = "landingpages-%s*" % (datetime.now() - timedelta(hours=1)).strftime("%Y-%m-%d-%I%p")
+
+                files.extend(glob.glob(os.path.join(UDP_LOG_PATH, now)))
+                files.extend(glob.glob(os.path.join(UDP_LOG_PATH, pasthour)))
             else:
-                self.logger.info("Processing files matching %s" % filename)
-                files = glob.glob(filename)
+                if os.path.isdir(filename):
+                    self.logger.info("Processing directory")
+                    filename = filename.rstrip('/')
+                    files = glob.glob("%s/*.gz" % filename)
+                else:
+                    self.logger.info("Processing files matching %s" % filename)
+                    files = glob.glob(filename)
 
             for f in files:
                 path, filename_only = f.rsplit('/', 1)
