@@ -210,8 +210,8 @@ class Command(BaseCommand):
 
                         self.debug_info = []
 
-                        if record.group("sitename") == "wikimediafoundation.org":
-                            project = lookup_project("foundationwiki")
+                        if record.group("landingpage"):
+                            project = lookup_project("foundationwiki") # TODO: this should reflect the source project not the LP wiki
 
                             self.debug_info.append(record.group("landingpage"))
                             self.debug_info.append(unquote(record.group("landingpage")))
@@ -246,8 +246,8 @@ class Command(BaseCommand):
                                 language = lookup_language(lang)
                                 country = lookup_country(coun)
 
-                        elif record.group("sitename") == "donate.wikimedia.org":
-                            project = lookup_project("donatewiki")
+                        else:
+                            project = lookup_project("donatewiki") # TODO: this should reflect the source project not the LP wiki
 
                             flp_vars = {
                                 "appeal" : qs["appeal"][0] if "appeal" in qs else "default",
@@ -275,15 +275,15 @@ class Command(BaseCommand):
                             language = lookup_language(flp_vars["language"])
                             country = lookup_language(flp_vars["country"])
 
-                        else:
-                            results["impression"]["error"] += 1
-                            self.logger.info("*** INVALID DOMAIN FOR LANDING PAGE IMPRESSION ***")
-                            self.logger.info("--- File: %s | Line: %d ---" % (filename, i+1))
-                            self.logger.info(m.group("url")[:200])
-                            if len(m.group("url")) > 200:
-                                self.logger.info("...TRUNCATED...")
-                            self.logger.info("*** END ***")
-                            continue
+#                        else:
+#                            results["impression"]["error"] += 1
+#                            self.logger.info("*** INVALID DOMAIN FOR LANDING PAGE IMPRESSION ***")
+#                            self.logger.info("--- File: %s | Line: %d ---" % (filename, i+1))
+#                            self.logger.info(m.group("url")[:200])
+#                            if len(m.group("url")) > 200:
+#                                self.logger.info("...TRUNCATED...")
+#                            self.logger.info("*** END ***")
+#                            continue
 
                         if landingpage is "" or language is None or country is None or project is None:
                             # something odd does not quite match in this request

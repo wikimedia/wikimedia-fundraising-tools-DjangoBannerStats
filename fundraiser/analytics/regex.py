@@ -154,6 +154,25 @@ landingpages = [
     ),
     re.compile(
         r"""
+            # match all of the landing page patterns on wmfwiki
+            (http|https)
+            ://
+            (?P<sitename>donate.wikimedia.org)/
+            (wiki/|w/index.php\?title=)
+            (?P<landingpage>
+                (
+                    L11                 # landing page naming scheme for 2011
+                  | L12                 # landing page naming scheme for 2012
+                  | L2011               # potential landing page naming scheme for 2011
+                  | L2012               # potential landing page naming scheme for 2012
+                  | WMF                 # eg WMFJA085
+                )
+                (?:(?!\?|&)[\S])*         # this will give us the landing page up to the next ? or &
+            )
+        """, re.VERBOSE | re.IGNORECASE
+    ),
+    re.compile(
+        r"""
             (http|https)
             ://
             (?P<sitename>donate.wikimedia.org)/
