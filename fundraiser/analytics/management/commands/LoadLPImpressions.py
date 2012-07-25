@@ -210,7 +210,7 @@ class Command(BaseCommand):
 
                         self.debug_info = []
 
-                        if record.group("landingpage"):
+                        if "landingpage" in record.groupdict():
                             project = lookup_project("foundationwiki") # TODO: this should reflect the source project not the LP wiki
 
                             self.debug_info.append(record.group("landingpage"))
