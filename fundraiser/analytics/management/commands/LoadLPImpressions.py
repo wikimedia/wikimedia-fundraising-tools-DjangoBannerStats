@@ -53,6 +53,11 @@ class Command(BaseCommand):
 
     debug_info = []
 
+    counts = {
+        "countries" : {},
+        "languages" : {},
+    }
+
     def handle(self, *args, **options):
         try:
             starttime = datetime.now()
@@ -93,7 +98,8 @@ class Command(BaseCommand):
 
                     sq = SquidLog(filename=filename_only, impressiontype="landingpage")
                     sq.timestamp = sq.filename2timestamp()
-                    sq.save()
+                    if not self.debug:
+                        sq.save()
 
                     self.matched += results["squid"]["match"]
                     self.nomatched += results["squid"]["nomatch"]
@@ -118,6 +124,11 @@ class Command(BaseCommand):
         except Exception:
             self.logger.exception("Error processing files")
 
+        for c,v in self.counts["countries"].iteritems():
+            print "%s - %s" % (c, v)
+        print "----------------------\n----------------------"
+        for l,v in self.counts["languages"].iteritems():
+            print "%s - %s" % (l, v)
 
     def process_file(self, filename=None):
         if filename is None:
@@ -216,35 +227,24 @@ class Command(BaseCommand):
                             self.debug_info.append(record.group("landingpage"))
                             self.debug_info.append(unquote(record.group("landingpage")))
 
-                            split = record.group("landingpage").rsplit('/', 2)
-                            lang, coun = ('','')
-
-                            self.debug_info.append(split)
-
-                            if len(split) == 3:
-                                landingpage, lang, coun = split
-                            elif len(split) == 2:
-                                landingpage, lang = split
-                                coun = 'XX'
-                            elif len(split) == 1:
-                                landingpage = split[0]
-                                coun = 'XX'
-                                lang = 'en'
-                            else:
-                                # uh oh, TODO: do something informative
-                                pass
-
+                            landingpage = record.group("landingpage").rsplit('/', 2)[0]
+                            country = qs["country"][0] if "country" in qs else "XX"
+                            language = qs["uselang"][0] if "uselang" in qs else "en"
 
                             self.debug_info.append("LP: %s" % landingpage)
 
-                            # deal with the payment-processing chapters and their pages
-                            if lang in ('CH','DE','GB','FR'):
-                                # the language and country are backwards
-                                language = lookup_language(coun)
-                                country = lookup_country(lang)
+                            if country in self.counts["countries"]:
+                                self.counts["countries"][country] += 1
                             else:
-                                language = lookup_language(lang)
-                                country = lookup_country(coun)
+                                self.counts["countries"][country] = 1
+
+                            if language in self.counts["languages"]:
+                                self.counts["languages"][language] += 1
+                            else:
+                                self.counts["languages"][language] = 1
+
+                            language = lookup_language(language)
+                            country = lookup_country(country)
 
                         else:
                             project = lookup_project("donatewiki") # TODO: this should reflect the source project not the LP wiki
@@ -274,16 +274,6 @@ class Command(BaseCommand):
                             ])
                             language = lookup_language(flp_vars["language"])
                             country = lookup_language(flp_vars["country"])
-
-#                        else:
-#                            results["impression"]["error"] += 1
-#                            self.logger.info("*** INVALID DOMAIN FOR LANDING PAGE IMPRESSION ***")
-#                            self.logger.info("--- File: %s | Line: %d ---" % (filename, i+1))
-#                            self.logger.info(m.group("url")[:200])
-#                            if len(m.group("url")) > 200:
-#                                self.logger.info("...TRUNCATED...")
-#                            self.logger.info("*** END ***")
-#                            continue
 
                         if landingpage is "" or language is None or country is None or project is None:
                             # something odd does not quite match in this request
@@ -340,7 +330,8 @@ class Command(BaseCommand):
                         # write the models in batch
                         if len(self.pending_squids) % batch_size == 0:
                             try:
-                                self.write(self.pending_squids, self.pending_impressions)
+                                if not self.debug:
+                                    self.write(self.pending_squids, self.pending_impressions)
                             except Exception:
                                 self.logger.exception("Error writing impressions to the database")
                             finally:
@@ -354,7 +345,8 @@ class Command(BaseCommand):
 
             try:
                 # write out any remaining records
-                self.write(self.pending_squids, self.pending_impressions)
+                if not self.debug:
+                    self.write(self.pending_squids, self.pending_impressions)
                 self.pending_squids = []
                 self.pending_impressions = []
 
@@ -371,6 +363,7 @@ class Command(BaseCommand):
 
     @transaction.commit_manually
     def write(self, squids, impressions):
+        return
         """
         Commits a batch of transactions. Attempts a single query per model by splitting the
         tuples of each banner impression and grouping by model.  If that fails, the function
