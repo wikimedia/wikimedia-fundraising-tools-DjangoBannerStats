@@ -17,7 +17,11 @@ class SquidLog(models.Model):
     def filename2timestamp(self):
         import datetime
         filename_trimmed = self.filename.lower().rstrip(".logz").lstrip("landigpges-")
-        ts = datetime.datetime.strptime(filename_trimmed, "%Y%m%d-%H%M%S")
+        try:
+            ts = datetime.datetime.strptime(filename_trimmed, "%Y%m%d-%H%M%S")
+        except ValueError:
+            # Don't catch this one
+            ts = datetime.datetime.strptime(filename_trimmed, "%Y-%m-%d-%I%p--%M")
         return ts
 
 class SquidHost(models.Model):
