@@ -9,5 +9,6 @@ urlpatterns = patterns('fundraiser.analytics',
     # url(r'^$', 'fundraiser.views.home', name='home'),
 
     url(r'^$', 'views.hello_world', name='hello_world'),
+    url(u'campaign_ecom/$', 'views.campaign_ecom', name='fundraiser.analytics.campaign_ecom'),
 
 )

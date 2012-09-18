@@ -1,0 +1,15 @@
+{% extends "wmf_base.html" %}
+
+{% block content %}
+
+    {% if not campaign %}
+        <form action="{% url fundraiser.analytics.campaign_ecom %}" method="post">{% csrf_token %}
+            {{ form.as_p }}
+            <input type="submit" value="Submit" />
+        </form>
+    {% else %}
+        <h3>{{ campaign }}</h3>
+    {% endif %}
+
+
+{% endblock %}
