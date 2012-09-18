@@ -366,7 +366,6 @@ class Command(BaseCommand):
 
     @transaction.commit_manually
     def write(self, squids, impressions):
-        return
         """
         Commits a batch of transactions. Attempts a single query per model by splitting the
         tuples of each banner impression and grouping by model.  If that fails, the function
