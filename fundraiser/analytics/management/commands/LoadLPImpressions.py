@@ -52,6 +52,7 @@ class Command(BaseCommand):
     pending_impressions = []
 
     debug_info = []
+    debug_count = 0
 
     counts = {
         "countries" : {},
@@ -179,6 +180,11 @@ class Command(BaseCommand):
                     else:
                         results["squid"]["match"] += 1
 
+                        # Go ahead and ignore SSL termination logs since they are missing GET params
+                        # and are followed by a proper squid log for the request
+                        if m.group("squid")[:3] == "ssl":
+                            continue
+
                         record = False
 
                         url_uni = unquote(m.group("url"))
@@ -277,6 +283,14 @@ class Command(BaseCommand):
                             ])
                             language = lookup_language(flp_vars["language"])
                             country = lookup_country(flp_vars["country"])
+
+                            if self.debug:
+                                if country.iso_code == "XX":
+                                    if self.debug_count < 100:
+                                        print "----------------------------------------"
+                                        print l[:500]
+                                        print "----------------------------------------"
+                                        self.debug_count += 1
 
                         if landingpage is "" or language is None or country is None or project is None:
                             # something odd does not quite match in this request
