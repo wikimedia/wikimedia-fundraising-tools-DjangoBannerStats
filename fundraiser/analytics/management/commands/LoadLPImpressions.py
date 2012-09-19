@@ -186,6 +186,7 @@ class Command(BaseCommand):
                         # Go ahead and ignore SSL termination logs since they are missing GET params
                         # and are followed by a proper squid log for the request
                         if m.group("squid")[:3] == "ssl":
+                            results["impression"]["ignore"] += 1
                             continue
 
                         record = False
