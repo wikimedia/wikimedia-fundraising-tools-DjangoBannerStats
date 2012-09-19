@@ -162,8 +162,10 @@ class Command(BaseCommand):
 
         file = gzip.open(filename, 'rb')
         try:
+            i = 0
 #        with gzip.open(filename, 'rb') as file: # incompatible with python2.6
-            for i, l in enumerate(file):
+            for l in file:
+                i += 1
                 try:
                     m = squidline.match(l)
                     if not m:
