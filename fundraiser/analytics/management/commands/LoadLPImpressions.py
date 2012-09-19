@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from django.db import connections, transaction
 from django.db.utils import IntegrityError
 
+import gc
 from datetime import datetime, timedelta
 import glob
 import gzip
@@ -377,6 +378,8 @@ class Command(BaseCommand):
             pass
         finally:
             file.close()
+
+        gc.collect()
 
         return results
 
