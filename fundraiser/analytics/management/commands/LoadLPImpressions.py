@@ -276,7 +276,7 @@ class Command(BaseCommand):
                                 flp_vars["form-countryspecific"]
                             ])
                             language = lookup_language(flp_vars["language"])
-                            country = lookup_language(flp_vars["country"])
+                            country = lookup_country(flp_vars["country"])
 
                         if landingpage is "" or language is None or country is None or project is None:
                             # something odd does not quite match in this request
