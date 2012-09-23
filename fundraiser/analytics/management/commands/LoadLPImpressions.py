@@ -430,3 +430,9 @@ class Command(BaseCommand):
 
                 for r in self.debug_info:
                     self.logger.info("\t%s" % r)
+
+            if s_len == 1 or i_len == 1:
+                return
+
+            for i in range(s_len):
+                self.write([squids[i]], [impressions[i]])
