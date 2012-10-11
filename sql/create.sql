@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS `bannerimpression_raw` (
   project_id      SMALLINT(3)   UNSIGNED DEFAULT NULL,
   language_id     SMALLINT(3)   UNSIGNED DEFAULT NULL,
   country_id      SMALLINT(3)   UNSIGNED DEFAULT NULL,
+  sample_rate     SMALLINT(4)   UNSIGNED DEFAULT 1,
   processed       TINYINT(1)    DEFAULT 0,
 
   PRIMARY KEY (id)

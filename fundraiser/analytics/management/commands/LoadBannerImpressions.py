@@ -1,15 +1,23 @@
 from django.core.management.base import BaseCommand
 from django.db import connections, transaction
+from django.db.utils import IntegrityError
 
-from datetime import datetime
+import gc
+from datetime import datetime, timedelta
+import glob
+import gzip
+import logging
 import MySQLdb
 from optparse import make_option
 import os
+import traceback
+from urllib import unquote
 import urlparse
-from django.db.utils import IntegrityError
 
 from fundraiser.analytics.functions import *
+from fundraiser.analytics.models import *
 from fundraiser.analytics.regex import *
+from fundraiser.settings import UDP_LOG_PATH
 
 class Command(BaseCommand):
 
@@ -28,9 +36,14 @@ class Command(BaseCommand):
             action='store_true',
             default=False,
             help='Do not save the impressions. Parse only.'),
+        make_option('', '--recent',
+            dest='recent',
+            action='store_true',
+            default=False,
+            help='Process recent logs.'),
         )
-    help = 'Parses the specified squid log file and stores the impression in the database.'
 
+    help = 'Parses the specified squid log file and stores the impression in the database.'
 
     def handle(self, *args, **options):
         try:
@@ -38,48 +51,71 @@ class Command(BaseCommand):
             filename = options.get('filename')
             self.debug = options.get('debug')
             self.verbose = options.get('verbose')
+            recent = options.get('recent')
 
             self.matched = 0
             self.nomatched = 0
+            self.ignored = 0
 
-            if os.path.isdir(filename):
-                print "Processing directory"
-                for f in os.listdir(filename):
+            files = []
+            if recent:
+                now = "landingpages-%s*" % datetime.now().strftime("%Y%m%d-%H")
+                pasthour = "landingpages-%s*" % (datetime.now() - timedelta(hours=1)).strftime("%Y%m%d-%H")
 
-                    subfile = os.path.join(filename,f)
-
-                    if not os.path.isdir(subfile):
-                        m, n = self.process_file(subfile)
-                        self.matched += m
-                        self.nomatched += n
-
-#                        if n == 0:
-#                            os.renames(subfile, os.path.join(filename, 'processed', f))
-
-                        if n == -1:
-                            break
-
-                        print "DONE - %d OKAY / %d FAILED - %s" % (m, n, subfile)
+                files.extend(glob.glob(os.path.join(UDP_LOG_PATH, now)))
+                files.extend(glob.glob(os.path.join(UDP_LOG_PATH, pasthour)))
             else:
-                m, n = self.process_file(filename)
+                if os.path.isdir(filename):
+                    self.logger.info("Processing directory")
+                    filename = filename.rstrip('/')
+                    files = glob.glob("%s/*.gz" % filename)
+                else:
+                    self.logger.info("Processing files matching %s" % filename)
+                    files = glob.glob(filename)
 
-                self.matched += m
-                self.nomatched += n
+            for f in files:
+                path, filename_only = f.rsplit('/', 1)
+                if not os.path.isdir(f):
+                    existing = SquidLog.objects.filter(filename=filename_only)
+                    if existing:
+                        self.logger.debug("Already processed %s  - skipping" % f)
+                        continue
 
-#                if n == 0:
-#                    os.renames(subfile, os.path.join(filename, 'processed', f))
+                    results = self.process_file(f)
 
-                print "DONE - %d OKAY / %d FAILED - %s" % (m, n, filename)
+                    sq = SquidLog(filename=filename_only, impressiontype="landingpage")
+                    sq.timestamp = sq.filename2timestamp()
+                    if not self.debug:
+                        sq.save()
+
+                    self.matched += results["squid"]["match"]
+                    self.nomatched += results["squid"]["nomatch"]
+
+                    self.logger.info("DONE - %s" % f)
+                    self.logger.info("\tSQUID: %d OKAY / %d FAILED" % (
+                        int(results["squid"]["match"]),
+                        int(results["squid"]["nomatch"])
+                        ))
+                    self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
+                        results["impression"]["match"],
+                        results["impression"]["nomatch"],
+                        results["impression"]["ignored"],
+                        results["impression"]["error"],
+                        ))
 
             endtime = datetime.now()
-            print "DONE"
-            print "Total matched: %d" % self.matched
-            print "Total not matched: %d" % self.nomatched
-            print "Finished in %d seconds" % (endtime - starttime).seconds
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            print e
+            self.logger.info("DONE")
+            self.logger.info("Total squid matched: %d" % self.matched)
+            self.logger.info("Total squid not matched: %d" % self.nomatched)
+            self.logger.info("Finished in %d.%d seconds" % ((endtime - starttime).seconds, (endtime - starttime).microseconds))
+        except Exception:
+            self.logger.exception("Error processing files")
+
+        for c,v in self.counts["countries"].iteritems():
+            print "%s - %s" % (c, v)
+        print "----------------------\n----------------------"
+        for l,v in self.counts["languages"].iteritems():
+            print "%s - %s" % (l, v)
 
 
     def process_file(self, filename=None):
