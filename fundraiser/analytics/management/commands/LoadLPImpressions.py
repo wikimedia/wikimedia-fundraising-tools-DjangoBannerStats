@@ -130,11 +130,6 @@ class Command(BaseCommand):
         except Exception:
             self.logger.exception("Error processing files")
 
-        for c,v in self.counts["countries"].iteritems():
-            print "%s - %s" % (c, v)
-        print "----------------------\n----------------------"
-        for l,v in self.counts["languages"].iteritems():
-            print "%s - %s" % (l, v)
 
     def process_file(self, filename=None):
         if filename is None:
@@ -196,6 +191,12 @@ class Command(BaseCommand):
                             results["impression"]["ignored"] += 1
                             continue
 
+                        # Also ignore anything forward for ALuminium or Grosley
+                        if m.group("xff") == "208.80.154.6" or m.group("xff") == "208.80.152.164":
+                            results["impression"]["ignored"] += 1
+                            continue
+
+
                         record = False
 
                         url_uni = unquote(m.group("url"))
@@ -252,16 +253,6 @@ class Command(BaseCommand):
                             language = qs["uselang"][0] if "uselang" in qs else "en"
 
                             self.debug_info.append("LP: %s" % landingpage)
-
-                            if country in self.counts["countries"]:
-                                self.counts["countries"][country] += 1
-                            else:
-                                self.counts["countries"][country] = 1
-
-                            if language in self.counts["languages"]:
-                                self.counts["languages"][language] += 1
-                            else:
-                                self.counts["languages"][language] = 1
 
                             language = lookup_language(language)
                             country = lookup_country(country)
