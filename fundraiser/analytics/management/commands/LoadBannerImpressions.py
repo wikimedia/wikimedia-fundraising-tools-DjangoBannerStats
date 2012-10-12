@@ -21,6 +21,8 @@ from fundraiser.settings import UDP_LOG_PATH
 
 class Command(BaseCommand):
 
+    logger = logging.getLogger("fundraiser.analytics.load_banners")
+
     option_list = BaseCommand.option_list + (
         make_option('-f', '--file',
             dest='filename',
@@ -45,6 +47,18 @@ class Command(BaseCommand):
 
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
+    impression_sql = "INSERT INTO `bannerimpression_raw` (timestamp, squid_id, squid_sequence, banner, campaign, project_id, language_id, country_id, sample_rate) VALUES %s"
+
+    pending_impressions = []
+
+    debug_info = []
+    debug_count = 0
+
+    counts = {
+        "countries" : {},
+        "languages" : {},
+    }
+
     def handle(self, *args, **options):
         try:
             starttime = datetime.now()
@@ -59,7 +73,8 @@ class Command(BaseCommand):
 
             files = []
             if recent:
-                now = "landingpages-%s*" % datetime.now().strftime("%Y%m%d-%H")
+                # TODO: lots of things
+                now = "bannerimpressions-%s*" % datetime.now().strftime("%Y%m%d-%H")
                 pasthour = "landingpages-%s*" % (datetime.now() - timedelta(hours=1)).strftime("%Y%m%d-%H")
 
                 files.extend(glob.glob(os.path.join(UDP_LOG_PATH, now)))
@@ -120,79 +135,161 @@ class Command(BaseCommand):
 
     def process_file(self, filename=None):
         if filename is None:
-            print "Error loading banner impressions - No file specified"
+            self.logger.error("Error loading banner impressions - No file specified")
             return
 
         if not os.path.exists(filename):
-            print "Error loading banner impressions - File %s does not exist" % filename
+            self.logger.error("Error loading banner impressions - File %s does not exist" % filename)
             return
 
-        print "Processing %s" % filename
+        self.logger.error("Processing %s" % filename)
 
-        matched = 0
-        nomatched = 0
+        results = {
+            "squid" : {
+                "match" : 0,
+                "nomatch" : 0
+            },
+            "impression" : {
+                "match" : 0,
+                "nomatch" : 0,
+                "ignored" : 0,
+                "error" : 0
+            }
+        }
 
         batch_size = 1500
-        batch_models = []
 
-        with open(filename, 'r') as file:
+        sample_rate = 1 # TODO: calculate the sample rate
+
+        file = gzip.open(filename, 'rb')
+        try:
+            i = 0
+
             for l in file:
-                m = squidline.match(l)
-                if not m:
-                    # TODO: do we want to write the failed lines to another file for reprocessing?
-                    nomatched += 1
-                    if self.debug:
-                        print "NO MATCH - %s" % l
-                    if self.verbose:
-                        if nomatched < 100:
-                            print "*** NO MATCH FOR BANNER IMPRESSION ***"
-                            print l
-                            print "*** END OF NO MATCH ***"
-                else:
-                    matched += 1
+                i += 1
+                try:
+                    m = squidline.match(l)
+                    if not m:
+                        # TODO: do we want to write the failed lines to another file for reprocessing?
+                        results["squid"]["nomatch"] += 1
+                        if self.verbose:
+                            if results["squid"]["nomatch"] < 100:
+                                self.logger.info("*** NO MATCH FOR LANDING PAGE IMPRESSION ***")
+                                self.logger.info("--- File: %s | Line: %d ---" % (filename, i+1))
+                                self.logger.info(l[:500])
+                                if len(l) > 500:
+                                    self.logger.info("...TRUNCATED...")
+                                self.logger.info("*** END OF NO MATCH ***")
+                    else:
+                        results["squid"]["match"] += 1
 
-                    squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
-                    seq = int(m.group("sequence"))
-                    timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
-                    url = urlparse.urlparse(m.group("url"))
-                    qs = urlparse.parse_qs(url.query, keep_blank_values=True)
+                        # Go ahead and ignore SSL termination logs since they are missing GET params
+                        # and are followed by a proper squid log for the request
+                        if m.group("squid")[:3] == "ssl":
+                            results["impression"]["ignored"] += 1
+                            continue
 
-                    banner = ""
-                    if "banner" in qs:
-                        banner = qs["banner"][0]
-                    campaign = ""
-                    if "campaign" in qs:
-                        campaign = qs["campaign"][0]
-                    project = None
-                    if "db" in qs:
-                        project = lookup_project(qs["db"][0])
-                    language = None
-                    if "userlang" in qs:
-                        language = lookup_language(qs["userlang"][0])
-                    country = None
-                    if "country" in qs:
-                        country = lookup_country(qs["country"][0])
+                        record = False
 
-                    # not using the models here saves a lot of wall time
-                    batch_models.append((
-                        (squid.id, seq, timestamp.strftime("%Y-%m-%d %H:%M:%S")),
-                        (timestamp.strftime("%Y-%m-%d %H:%M:%S"), banner, campaign,
-                            project.id, language.id, country.id)
-                    ))
+                        url_uni = unquote(m.group("url"))
+                        while unquote(url_uni) != url_uni:
+                            url_uni = unquote(url_uni)
 
-                    # write the models in batch
-                    if len(batch_models) % batch_size == 0:
-                        self.write(batch_models)
-                        batch_models = []
+                        url_uni = unicode(url_uni, 'latin_1').encode('utf-8')
 
-            # write out any remaining in the list
-            self.write(batch_models)
-            batch_models = []
+                        squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
+                        seq = int(m.group("sequence"))
+                        timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
+                        url = urlparse.urlparse(m.group("url"))
+                        qs = urlparse.parse_qs(url.query, keep_blank_values=True)
 
-        return matched, nomatched
+                        country = qs["country"][0] if "country" in qs else "XX"
+                        language = qs["uselang"][0] if "uselang" in qs else "en"
+
+                        if country in self.counts["countries"]:
+                            self.counts["countries"][country] += 1
+                        else:
+                            self.counts["countries"][country] = 1
+
+                        if language in self.counts["languages"]:
+                            self.counts["languages"][language] += 1
+                        else:
+                            self.counts["languages"][language] = 1
+
+                        banner = ""
+                        if "banner" in qs:
+                            banner = qs["banner"][0]
+                        campaign = ""
+                        if "campaign" in qs:
+                            campaign = qs["campaign"][0]
+                        project = None
+                        if "db" in qs:
+                            project = lookup_project(qs["db"][0])
+
+                        language = lookup_language(language)
+                        country = lookup_country(country)
+
+                        # not using the models here saves a lot of wall time
+                        try:
+                            banner_tmp = "('%s', %d, %d, '%s', '%s', %d, %d, %d, %d)" % (
+                                MySQLdb.escape_string(timestamp.strftime("%Y-%m-%d %H:%M:%S")),
+                                squid.id,
+                                seq,
+                                MySQLdb.escape_string(banner),
+                                MySQLdb.escape_string(campaign),
+                                project.id,
+                                language.id,
+                                country.id,
+                                sample_rate
+                                )
+                            self.pending_impressions.append(banner_tmp)
+                            results["impression"]["match"] += 1
+
+                        except Exception:
+                            results["impression"]["error"] += 1
+                            self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING BANNER IMPRESSION **")
+                            self.logger.error("********************\n%s\n********************" % l)
+
+                        finally:
+                            lp_tmp = ""
+
+                        # write the models in batch
+                        if len(self.pending_impressions) % batch_size == 0:
+                            try:
+                                if not self.debug:
+                                    self.write(self.pending_impressions)
+                            except Exception:
+                                self.logger.exception("Error writing impressions to the database")
+                            finally:
+                                self.pending_impressions = []
+
+                except Exception as e:
+                    results["impression"]["error"] += 1
+                    self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING BANNER IMPRESSION **")
+                    self.logger.error("********************\n%s\n********************" % l)
+
+            try:
+                # write out any remaining records
+                if not self.debug:
+                    self.write(self.pending_impressions)
+                self.pending_impressions = []
+
+            except Exception as e:
+                self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
+                self.logger.error("********************")
+
+        except IOError:
+            pass
+        finally:
+            file.close()
+
+        gc.collect()
+
+        return results
+
 
     @transaction.commit_manually
-    def write(self, list):
+    def write(self, impressions):
         """
         Commits a batch of transactions. Attempts a single query per model by splitting the
         tuples of each banner impression and grouping by model.  If that fails, the function
@@ -200,36 +297,40 @@ class Command(BaseCommand):
         """
         cursor = connections['default'].cursor()
 
-        squid_sql = "INSERT INTO `squidrecord` (squid_id, sequence, timestamp) VALUES %s"
-        banner_sql = "INSERT INTO `bannerimpression_raw` (timestamp, banner, campaign, project_id, language_id, country_id) VALUES %s"
+        i_len = len(impressions)
 
-        squid_values = []
-        banner_values = []
+        if not i_len:
+            return
 
-        for s,b in list:
-            squid_values.append(
-                "(%s, %s, '%s')" % (
-                    MySQLdb.escape_string(str(s[0])),
-                    MySQLdb.escape_string(str(s[1])),
-                    MySQLdb.escape_string(str(s[2]))
-                )
-            )
-            banner_values.append(
-                "('%s', '%s', '%s', %s, %s, %s)" % (
-                    MySQLdb.escape_string(str(b[0])),
-                    MySQLdb.escape_string(str(b[1])),
-                    MySQLdb.escape_string(str(b[2])),
-                    MySQLdb.escape_string(str(b[3])),
-                    MySQLdb.escape_string(str(b[4])),
-                    MySQLdb.escape_string(str(b[5]))
-                )
-            )
         try:
             # attempt to create all in batches
-            cursor.execute(squid_sql % ', '.join(squid_values))
-            cursor.execute(banner_sql % ', '.join(banner_values))
+            cursor.execute(self.impression_sql % ', '.join(impressions))
+
             transaction.commit('default')
-        except IntegrityError:
-            # someone was not happy, likely a SquidRecord
-            # TODO: break the batch into smaller batches and retry
+
+        except IntegrityError as e:
+            # some impression was not happy
             transaction.rollback('default')
+
+            if i_len == 1:
+                return
+
+            for i in impressions:
+                self.write([impressions[i]])
+
+        except Exception as e:
+            transaction.rollback()
+
+            self.logger.exception("UNHANDLED EXCEPTION")
+
+            if self.debug:
+                self.logger.info(self.impression_sql % ', '.join(impressions))
+
+                for r in self.debug_info:
+                    self.logger.info("\t%s" % r)
+
+            if i_len == 1:
+                return
+
+            for i in impressions:
+                self.write([impressions[i]])
