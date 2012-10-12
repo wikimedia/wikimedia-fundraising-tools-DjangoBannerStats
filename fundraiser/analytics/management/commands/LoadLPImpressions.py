@@ -110,9 +110,10 @@ class Command(BaseCommand):
                     self.nomatched += results["squid"]["nomatch"]
 
                     self.logger.info("DONE - %s" % f)
-                    self.logger.info("\tSQUID: %d OKAY / %d FAILED" % (
+                    self.logger.info("\tSQUID: %d OKAY / %d FAILED with %d IGNORED" % (
                         int(results["squid"]["match"]),
-                        int(results["squid"]["nomatch"])
+                        int(results["squid"]["nomatch"]),
+                        int(results["squid"]["ignored"])
                     ))
                     self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
                         results["impression"]["match"],
@@ -149,7 +150,8 @@ class Command(BaseCommand):
         results = {
             "squid" : {
                 "match" : 0,
-                "nomatch" : 0
+                "nomatch" : 0,
+                "ignored" : 0,
             },
             "impression" : {
                 "match" : 0,
@@ -186,6 +188,11 @@ class Command(BaseCommand):
                         # Go ahead and ignore SSL termination logs since they are missing GET params
                         # and are followed by a proper squid log for the request
                         if m.group("squid")[:3] == "ssl":
+                            results["squid"]["ignored"] += 1
+                            continue
+
+                        # Also ignore anything coming from ALuminium or Grosley
+                        if m.group("client") == "208.80.154.6" or m.group("client") == "208.80.152.164":
                             results["impression"]["ignored"] += 1
                             continue
 
