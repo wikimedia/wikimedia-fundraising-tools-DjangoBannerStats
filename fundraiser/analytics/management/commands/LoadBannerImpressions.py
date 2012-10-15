@@ -240,7 +240,7 @@ class Command(BaseCommand):
                         country = lookup_country(country)
 
                         if banner == "" or campaign == "" or project is None:
-                            if "bannerController" in l:
+                            if "BannerController" in l:
                                 # we really don't care about these, so there is no need to log them as errors
                                 results["impression"]["ignored"] += 1
                                 continue
