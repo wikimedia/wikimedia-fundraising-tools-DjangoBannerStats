@@ -107,9 +107,11 @@ class Command(BaseCommand):
                     self.nomatched += results["squid"]["nomatch"]
 
                     self.logger.info("DONE - %s" % f)
-                    self.logger.info("\tSQUID: %d OKAY / %d FAILED" % (
-                        results["squid"]["match"],
-                        results["squid"]["nomatch"]
+                    self.logger.info("\tSQUID: %d OKAY / %d FAILED with %d IGNORED and %d 404s" % (
+                        int(results["squid"]["match"]),
+                        int(results["squid"]["nomatch"]),
+                        int(results["squid"]["ignored"]),
+                        int(results["squid"]["404"])
                         ))
                     self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
                         results["impression"]["match"],
@@ -149,6 +151,7 @@ class Command(BaseCommand):
                 "match" : 0,
                 "nomatch" : 0,
                 "ignored" : 0,
+                "404" : 0,
             },
             "impression" : {
                 "match" : 0,
@@ -188,6 +191,11 @@ class Command(BaseCommand):
                         # and are followed by a proper squid log for the request
                         if m.group("squid")[:3] == "ssl":
                             results["squid"]["ignored"] += 1
+                            continue
+
+                        # Ignore 404s
+                        if m.group("squidstatus")[-3:] == "404":
+                            results["squid"]["404"] += 1
                             continue
 
                         # Also ignore anything coming from ALuminium or Grosley
