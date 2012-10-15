@@ -240,6 +240,10 @@ class Command(BaseCommand):
                         country = lookup_country(country)
 
                         if banner == "" or campaign == "" or project is None:
+                            if "bannerController" in l:
+                                # we really don't care about these, so there is no need to log them as errors
+                                results["impression"]["ignored"] += 1
+                                continue
                             results["impression"]["error"] += 1
                             self.logger.exception("** INVALID BANNER IMPRESSION - NOT ENOUGH DATA TO RECORD **")
                             self.logger.error("********************\n%s\n********************" % l.strip())
