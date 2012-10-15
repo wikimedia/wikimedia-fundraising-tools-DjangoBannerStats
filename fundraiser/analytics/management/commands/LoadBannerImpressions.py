@@ -128,13 +128,6 @@ class Command(BaseCommand):
         except Exception:
             self.logger.exception("Error processing files")
 
-        for c,v in self.counts["countries"].iteritems():
-            print "%s - %s" % (c, v)
-        print "----------------------\n----------------------"
-        for l,v in self.counts["languages"].iteritems():
-            print "%s - %s" % (l, v)
-
-
     def process_file(self, filename=None):
         if filename is None:
             self.logger.error("Error loading banner impressions - No file specified")

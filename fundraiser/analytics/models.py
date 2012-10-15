@@ -16,12 +16,29 @@ class SquidLog(models.Model):
 
     def filename2timestamp(self):
         import datetime
-        filename_trimmed = self.filename.lower().rstrip(".logz").lstrip("landigpges-")
+        import re
+
+        regex = re.compile(
+            r"""
+                (bannerImpressions|landingpages)
+                -
+                (sampled[0-9]+-)?
+                (?P<timestamp>[0-9-AMP]+)
+                .log.gz
+            """,
+            re.IGNORECASE | re.VERBOSE
+        )
+
+        parts = regex.match(self.filename)
+
+        if not parts:
+            raise ValueError("Filename does not match existing patterns for squid logs")
+
         try:
-            ts = datetime.datetime.strptime(filename_trimmed, "%Y%m%d-%H%M%S")
+            ts = datetime.datetime.strptime(parts.group("timestamp"), "%Y%m%d-%H%M%S")
         except ValueError:
             # Don't catch this one
-            ts = datetime.datetime.strptime(filename_trimmed, "%Y-%m-%d-%I%p--%M")
+            ts = datetime.datetime.strptime(parts.group("timestamp"), "%Y-%m-%d-%I%p--%M")
         return ts
 
 class SquidHost(models.Model):
