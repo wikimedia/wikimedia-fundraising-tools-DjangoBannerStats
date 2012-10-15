@@ -239,6 +239,11 @@ class Command(BaseCommand):
                         language = lookup_language(language)
                         country = lookup_country(country)
 
+                        if banner == "" or campaign == "" or project is None:
+                            results["impression"]["error"] += 1
+                            self.logger.exception("** INVALID BANNER IMPRESSION - NOT ENOUGH DATA TO RECORD **")
+                            self.logger.error("********************\n%s\n********************" % l)
+
                         # not using the models here saves a lot of wall time
                         try:
                             banner_tmp = "('%s', %d, %d, '%s', '%s', %d, %d, %d, %d)" % (
