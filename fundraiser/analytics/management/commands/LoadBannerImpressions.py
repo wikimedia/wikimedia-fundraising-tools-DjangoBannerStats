@@ -202,7 +202,7 @@ class Command(BaseCommand):
 
                         # And ignore all of our testing UA's
                         for ua in ignore_uas:
-                            if m.group("useragent").match(ua):
+                            if ua.match(m.group("useragent")):
                                 results["impression"]["ignored"] += 1
                                 continue
 
