@@ -27,10 +27,10 @@ def lookup_country(country=None, default="XX", create=True, verbose=False):
             return lookup_country(default, False, create, verbose)
         else:
             return None
-    if len(country) > 8:
+    if len(country) > 2:
         if verbose:
-            print "** TRUNCATING COUNTRY ISO_CODE %s to %s" % (country, country[:8])
-        country = country[:8]
+            print "** INVALID COUNTRY ISO_CODE %s --- USING DEFAULT" % country
+        country = default
     try:
         country = Country.objects.get(iso_code=country)
         return country

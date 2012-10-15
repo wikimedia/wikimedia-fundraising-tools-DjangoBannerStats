@@ -98,7 +98,7 @@ class Command(BaseCommand):
 
                     results = self.process_file(f)
 
-                    sq = SquidLog(filename=filename_only, impressiontype="landingpage")
+                    sq = SquidLog(filename=filename_only, impressiontype="banner")
                     sq.timestamp = sq.filename2timestamp()
                     if not self.debug:
                         sq.save()
@@ -156,7 +156,11 @@ class Command(BaseCommand):
 
         batch_size = 1500
 
-        sample_rate = 1 # TODO: calculate the sample rate
+        sample_rate = 1
+
+        path, filename_only = filename.rsplit('/', 1)
+        if sampled.match(filename_only):
+            sample_rate = int(sampled.match(filename_only).group("samplerate"))
 
         file = gzip.open(filename, 'rb')
         try:

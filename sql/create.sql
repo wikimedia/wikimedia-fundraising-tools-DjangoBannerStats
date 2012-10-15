@@ -65,7 +65,8 @@ CREATE TABLE IF NOT EXISTS `bannerimpression_raw` (
   sample_rate     SMALLINT(4)   UNSIGNED DEFAULT 1,
   processed       TINYINT(1)    DEFAULT 0,
 
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  UNIQUE KEY (squid_id, squid_sequence)
 ) DEFAULT CHARACTER SET = utf8 ENGINE = InnoDB;
 
 CREATE TABLE IF NOT EXISTS `landingpageimpression_raw` (

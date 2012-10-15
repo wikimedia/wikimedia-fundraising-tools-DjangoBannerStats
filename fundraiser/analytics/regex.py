@@ -200,3 +200,15 @@ ignore_uas = [
     re.compile(r"""/usr/local/frontend_tester/p14"""),
     re.compile(r"""^bot""", re.IGNORECASE),
 ]
+
+sampled = re.compile(
+    r"""
+        bannerImpressions-
+        sampled
+        (?P<samplerate>[0-9]+)
+        -
+        ([0-9-AMP]+)
+        .log.gz
+    """,
+    re.VERBOSE | re.IGNORECASE
+)
