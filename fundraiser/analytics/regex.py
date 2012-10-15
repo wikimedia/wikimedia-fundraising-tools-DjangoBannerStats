@@ -4,31 +4,31 @@ import re
 squidline = re.compile(
     r"""
         (?P<squid>[\S]+) # Name of the squid server
-        (\s[-]*)
+        \s[-]*
         (?P<sequence>[0-9]+) # Sequence ID from the squid server
-        (\s)
+        \s
         (?P<timestamp>[0-9-]+T[0-9:.]+) # Timestamp
-        (\s)
+        \s
         (?P<servicetime>[0-9.]+) # Request service time
-        (\s)
+        \s
         (?P<client>[\S]+) # Client IP address
-        (\s)
+        \s
         (?P<squidstatus>[\S]+) # Squid request status and HTTP status code
-        (\s)
+        \s
         (?P<reply>[0-9]+) # Reply size including HTTP headers
-        (\s)
+        \s
         (?P<request>[\S]+) # Request type
-        (\s)
+        \s
         (?P<url>[\S]+) # Request URL
-        (\s)
+        \s
         (?P<squidhierarchy>[\S]+) # Squid hierarchy status, peer IP
-        (\s)
+        \s
         (?P<mime>[\S]+) # MIME content type
-        (\s)
+        \s
         (?P<referrer>[\S]+) # Referer header
-        (\s)
+        \s
         (?P<xff>[\S]+) # X-Forwarded-For header
-        (\s)
+        \s
         (?P<useragent>[\S\s]+) # User-Agent header
     """, re.VERBOSE
 )
@@ -186,4 +186,17 @@ landingpages = [
             )
         """, re.VERBOSE | re.IGNORECASE
     )
+]
+
+ignore_uas = [
+    re.compile(r"""frontend_tester/p14"""),
+    re.compile(r"""frontend_tester/p14_1"""),
+    re.compile(r"""/home/mwaler/frontend_tester/p14"""),
+    re.compile(r"""\./p12"""),
+    re.compile(r"""\./p13"""),
+    re.compile(r"""\./p14"""),
+    re.compile(r"""\./p15"""),
+    re.compile(r"""/usr/local/frontend_tester/p12"""),
+    re.compile(r"""/usr/local/frontend_tester/p14"""),
+    re.compile(r"""^bot""", re.IGNORECASE),
 ]

@@ -108,8 +108,8 @@ class Command(BaseCommand):
 
                     self.logger.info("DONE - %s" % f)
                     self.logger.info("\tSQUID: %d OKAY / %d FAILED" % (
-                        int(results["squid"]["match"]),
-                        int(results["squid"]["nomatch"])
+                        results["squid"]["match"],
+                        results["squid"]["nomatch"]
                         ))
                     self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
                         results["impression"]["match"],
@@ -147,7 +147,8 @@ class Command(BaseCommand):
         results = {
             "squid" : {
                 "match" : 0,
-                "nomatch" : 0
+                "nomatch" : 0,
+                "ignored" : 0,
             },
             "impression" : {
                 "match" : 0,
@@ -186,16 +187,24 @@ class Command(BaseCommand):
                         # Go ahead and ignore SSL termination logs since they are missing GET params
                         # and are followed by a proper squid log for the request
                         if m.group("squid")[:3] == "ssl":
+                            results["squid"]["ignored"] += 1
+                            continue
+
+                        # Also ignore anything coming from ALuminium or Grosley
+                        if m.group("client") == "208.80.154.6" or m.group("client") == "208.80.152.164":
                             results["impression"]["ignored"] += 1
                             continue
 
-                        record = False
+                        # Also ignore anything forward for ALuminium or Grosley
+                        if m.group("xff") == "208.80.154.6" or m.group("xff") == "208.80.152.164":
+                            results["impression"]["ignored"] += 1
+                            continue
 
-                        url_uni = unquote(m.group("url"))
-                        while unquote(url_uni) != url_uni:
-                            url_uni = unquote(url_uni)
-
-                        url_uni = unicode(url_uni, 'latin_1').encode('utf-8')
+                        # And ignore all of our testing UA's
+                        for ua in ignore_uas:
+                            if m.group("useragent").match(ua):
+                                results["impression"]["ignored"] += 1
+                                continue
 
                         squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
                         seq = int(m.group("sequence"))
@@ -251,7 +260,7 @@ class Command(BaseCommand):
                             self.logger.error("********************\n%s\n********************" % l)
 
                         finally:
-                            lp_tmp = ""
+                            banner_tmp = ""
 
                         # write the models in batch
                         if len(self.pending_impressions) % batch_size == 0:
