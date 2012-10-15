@@ -242,7 +242,8 @@ class Command(BaseCommand):
                         if banner == "" or campaign == "" or project is None:
                             results["impression"]["error"] += 1
                             self.logger.exception("** INVALID BANNER IMPRESSION - NOT ENOUGH DATA TO RECORD **")
-                            self.logger.error("********************\n%s\n********************" % l)
+                            self.logger.error("********************\n%s\n********************" % l.strip())
+                            continue
 
                         # not using the models here saves a lot of wall time
                         try:
@@ -263,7 +264,7 @@ class Command(BaseCommand):
                         except Exception:
                             results["impression"]["error"] += 1
                             self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING BANNER IMPRESSION **")
-                            self.logger.error("********************\n%s\n********************" % l)
+                            self.logger.error("********************\n%s\n********************" % l.strip())
 
                         finally:
                             banner_tmp = ""
@@ -281,7 +282,7 @@ class Command(BaseCommand):
                 except Exception as e:
                     results["impression"]["error"] += 1
                     self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING BANNER IMPRESSION **")
-                    self.logger.error("********************\n%s\n********************" % l)
+                    self.logger.error("********************\n%s\n********************" % l.strip())
 
             try:
                 # write out any remaining records
