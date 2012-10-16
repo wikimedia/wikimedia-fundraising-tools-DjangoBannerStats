@@ -73,38 +73,38 @@ class Command(BaseCommand):
 
         cursor = connections['default'].cursor()
 
-        try:
-            impressions = cursor.execute(self.select_sql % batchSize)
+#        try:
+        impressions = cursor.execute(self.select_sql % batchSize)
 
-            counts = {}
+        counts = dict()
 
-            for i in impressions:
-                k = "'%s', '%s', '%s', %d, %d, %d" % (
-                    datetime.strptime(i['timestamp'], "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d %H:%M:00"),
-                    i['banner'],
-                    i['campaign'],
-                    i['project_id'],
-                    i['language_id'],
-                    i['country_id'],
-                )
-                if k in counts:
-                    counts[k] += 1
-                else:
-                    counts[k] = 1
+        for i in impressions:
+            k = "'%s', '%s', '%s', %d, %d, %d" % (
+                datetime.strptime(i['timestamp'], "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d %H:%M:00"),
+                i['banner'],
+                i['campaign'],
+                i['project_id'],
+                i['language_id'],
+                i['country_id'],
+            )
+            if k in counts:
+                counts[k] += 1
+            else:
+                counts[k] = 1
 
-            for k, c in counts.iteritems():
-                cursor.execute(self.insert_sql % (
-                    "(%s, %d)" % (k, c), c
-                ))
+        for k, c in counts.iteritems():
+            cursor.execute(self.insert_sql % (
+                "(%s, %d)" % (k, c), c
+            ))
 
-            to_update = ""
-            for i in impressions:
-                to_update = "%s, %d" % (to_update, i['id'])
+        to_update = ""
+        for i in impressions:
+            to_update = "%s, %d" % (to_update, i['id'])
 
-            cursor.execute(self.update_sql % to_update)
+        cursor.execute(self.update_sql % to_update)
 
-            transaction.commit('default')
-
-        except Exception as e:
-            transaction.rollback('default')
-            raise e
+#            transaction.commit('default')
+#
+#        except Exception as e:
+#            transaction.rollback('default')
+#            raise e
