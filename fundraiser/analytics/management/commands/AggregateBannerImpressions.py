@@ -63,6 +63,8 @@ class Command(BaseCommand):
         for r in range(rounds):
             self.run(batch)
 
+        endtime = datetime.now()
+
 
     @transaction.commit_manually
     def run(self, batchSize=1000):
@@ -78,7 +80,7 @@ class Command(BaseCommand):
 
             for i in impressions:
                 k = "'%s', '%s', '%s', %d, %d, %d" % (
-                    datetime.strptime(i['timestamp'],"%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d %H:%M:00"),
+                    datetime.strptime(i['timestamp'], "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d %H:%M:00"),
                     i['banner'],
                     i['campaign'],
                     i['project_id'],
@@ -103,5 +105,6 @@ class Command(BaseCommand):
 
             transaction.commit('default')
 
-        except:
+        except Exception as e:
             transaction.rollback('default')
+            raise e
