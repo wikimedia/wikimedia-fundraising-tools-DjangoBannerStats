@@ -208,9 +208,9 @@ class Command(BaseCommand):
                             if ua.match(m.group("useragent")):
                                 results["impression"]["ignored"] += 1
                                 continue
-                            elif phantomJS.search(m.group("useragent")):
-                                results["impression"]["ignored"] += 1
-                                continue
+                        if phantomJS.search(m.group("useragent")):
+                            results["impression"]["ignored"] += 1
+                            continue
 
                         squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
                         seq = int(m.group("sequence"))

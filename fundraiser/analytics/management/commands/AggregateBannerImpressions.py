@@ -66,7 +66,7 @@ class Command(BaseCommand):
         endtime = datetime.now()
 
 
-    @transaction.commit_manually
+#    @transaction.commit_manually
     def run(self, batchSize=1000):
         if not isinstance(batchSize, int):
             raise TypeError("Invalid batch size %s" % batchSize)
@@ -74,18 +74,18 @@ class Command(BaseCommand):
         cursor = connections['default'].cursor()
 
 #        try:
-        impressions = cursor.execute(self.select_sql % batchSize)
+        cursor.execute(self.select_sql % batchSize)
 
         counts = dict()
 
-        for i in impressions:
+        for i in cursor:
             k = "'%s', '%s', '%s', %d, %d, %d" % (
-                datetime.strptime(i['timestamp'], "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d %H:%M:00"),
-                i['banner'],
-                i['campaign'],
-                i['project_id'],
-                i['language_id'],
-                i['country_id'],
+                i[1].strftime("%Y-%m-%d %H:%M:00"),
+                i[2],
+                i[3],
+                i[4],
+                i[5],
+                i[6],
             )
             if k in counts:
                 counts[k] += 1
@@ -98,10 +98,12 @@ class Command(BaseCommand):
             ))
 
         to_update = ""
-        for i in impressions:
-            to_update = "%s, %d" % (to_update, i['id'])
+        for i in cursor:
+            to_update = "%s, %d" % (to_update, i[0])
 
-        cursor.execute(self.update_sql % to_update)
+#        cursor.execute(self.update_sql % to_update)
+
+#        transaction.rollback('default')
 
 #            transaction.commit('default')
 #
