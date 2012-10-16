@@ -10,8 +10,6 @@ import logging
 import MySQLdb
 from optparse import make_option
 import os
-import traceback
-from urllib import unquote
 import urlparse
 
 from fundraiser.analytics.functions import *
@@ -208,6 +206,9 @@ class Command(BaseCommand):
                         # And ignore all of our testing UA's
                         for ua in ignore_uas:
                             if ua.match(m.group("useragent")):
+                                results["impression"]["ignored"] += 1
+                                continue
+                            elif "PhantomJS" in m.group("useragent"):
                                 results["impression"]["ignored"] += 1
                                 continue
 
