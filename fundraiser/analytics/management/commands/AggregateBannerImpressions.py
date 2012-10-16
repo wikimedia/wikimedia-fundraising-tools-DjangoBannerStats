@@ -46,7 +46,7 @@ class Command(BaseCommand):
 
     help = ''
 
-    select_sql = "SELECT id, timestamp, banner, campaign, project_id, language_id, country_id FROM bannerimpression_raw WHERE processed = 0 LIMIT %d"
+    select_sql = "SELECT id, timestamp, banner, campaign, project_id, language_id, country_id, sample_rate FROM bannerimpression_raw WHERE processed = 0 LIMIT %d"
 
     insert_sql = "INSERT INTO bannerimpressions (timestamp, banner, campaign, project_id, language_id, country_id, count) VALUES (%s) ON DUPLICATE KEY update count=count+%d"
 
@@ -95,9 +95,9 @@ class Command(BaseCommand):
                     i[6],
                 )
                 if k in counts:
-                    counts[k] += 1
+                    counts[k] += i[7]
                 else:
-                    counts[k] = 1
+                    counts[k] = i[7]
                 ids.append(i[0])
 
             for k, c in counts.iteritems():
