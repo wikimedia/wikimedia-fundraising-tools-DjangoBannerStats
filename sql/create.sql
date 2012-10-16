@@ -54,8 +54,8 @@ CREATE TABLE IF NOT EXISTS `country` (
 
 CREATE TABLE IF NOT EXISTS `bannerimpression_raw` (
   id              INT(11)       UNSIGNED AUTO_INCREMENT,
-  timestamp       TIMESTAMP,
-  squid_id        INT(11)       UNSIGNED DEFAULT NULL,
+  timestamp       TIMESTAMP     DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  squid_id        SMALLINT(11)  UNSIGNED DEFAULT NULL,
   squid_sequence  INT(11)       UNSIGNED DEFAULT NULL,
   banner          VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
   campaign        VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
@@ -66,13 +66,34 @@ CREATE TABLE IF NOT EXISTS `bannerimpression_raw` (
   processed       TINYINT(1)    DEFAULT 0,
 
   PRIMARY KEY (id),
-  UNIQUE KEY (squid_id, squid_sequence)
+  UNIQUE KEY (squid_id, squid_sequence, timestamp)
+) DEFAULT CHARACTER SET = utf8 ENGINE = InnoDB;
+
+CREATE TABLE IF NOT EXISTS `bannerimpressions` (
+  id              INT(11)       UNSIGNED AUTO_INCREMENT,
+  timestamp       TIMESTAMP     DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  banner          VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
+  campaign        VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
+  project_id      SMALLINT(3)   UNSIGNED DEFAULT NULL,
+  language_id     SMALLINT(3)   UNSIGNED DEFAULT NULL,
+  country_id      SMALLINT(3)   UNSIGNED DEFAULT NULL,
+  count           MEDIUMINT(11) DEFAULT 0,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY(timestamp, banner, campaign, project_id, language_id, country_id),
+  INDEX (timestamp),
+  INDEX (banner),
+  INDEX (campaign),
+  INDEX (project_id),
+  INDEX (language_id),
+  INDEX (country_id)
 ) DEFAULT CHARACTER SET = utf8 ENGINE = InnoDB;
 
 CREATE TABLE IF NOT EXISTS `landingpageimpression_raw` (
   id              INT(11)       UNSIGNED AUTO_INCREMENT,
-  timestamp       TIMESTAMP,
-  squidrecord_id  INT(11)       UNSIGNED DEFAULT NULL,
+  timestamp       TIMESTAMP     DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  squid_id        SMALLINT(11)  UNSIGNED DEFAULT NULL,
+  squid_sequence  INT(11)       UNSIGNED DEFAULT NULL,
   utm_source      VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
   utm_campaign    VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
   utm_medium      VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
@@ -88,7 +109,7 @@ CREATE TABLE IF NOT EXISTS `landingpageimpression_raw` (
 
 CREATE TABLE IF NOT EXISTS `landingpageimpressions` (
   id              INT(11)       UNSIGNED AUTO_INCREMENT,
-  timestamp       TIMESTAMP,
+  timestamp       TIMESTAMP     DEFAULT CURRENT_TIMESTAMP NOT NULL,
   utm_source      VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
   utm_campaign    VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
   utm_medium      VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
@@ -96,7 +117,7 @@ CREATE TABLE IF NOT EXISTS `landingpageimpressions` (
   project_id      SMALLINT(3)   UNSIGNED DEFAULT NULL,
   language_id     SMALLINT(3)   UNSIGNED DEFAULT NULL,
   country_id      SMALLINT(3)   UNSIGNED DEFAULT NULL,
-  count           MEDIUMINT(11) UNSIGNED,
+  count           MEDIUMINT(11) UNSIGNED DEFAULT 0,
 
   PRIMARY KEY (id),
   UNIQUE KEY (timestamp, utm_source, utm_campaign, utm_medium,
