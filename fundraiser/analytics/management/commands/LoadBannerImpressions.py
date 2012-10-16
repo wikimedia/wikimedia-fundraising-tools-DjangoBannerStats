@@ -341,7 +341,7 @@ class Command(BaseCommand):
                 return
 
             for i in impressions:
-                self.write([impressions[i]])
+                self.write([i])
 
         except Exception as e:
             transaction.rollback()
@@ -358,4 +358,4 @@ class Command(BaseCommand):
                 return
 
             for i in impressions:
-                self.write([impressions[i]])
+                self.write([i])

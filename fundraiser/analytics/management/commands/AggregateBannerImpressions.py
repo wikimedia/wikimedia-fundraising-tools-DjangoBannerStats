@@ -65,48 +65,52 @@ class Command(BaseCommand):
 
         endtime = datetime.now()
 
+        print "Aggregated %d rounds of %d each in %d.%d seconds" % (rounds, batch, (endtime - starttime).seconds, (endtime - starttime).microseconds)
 
-#    @transaction.commit_manually
+
+    @transaction.commit_manually
     def run(self, batchSize=1000):
         if not isinstance(batchSize, int):
             raise TypeError("Invalid batch size %s" % batchSize)
 
         cursor = connections['default'].cursor()
 
-#        try:
-        cursor.execute(self.select_sql % batchSize)
+        try:
+            num = cursor.execute(self.select_sql % batchSize)
 
-        counts = dict()
+            if num == 0:
+                transaction.commit('default')
+                return None
 
-        for i in cursor:
-            k = "'%s', '%s', '%s', %d, %d, %d" % (
-                i[1].strftime("%Y-%m-%d %H:%M:00"),
-                i[2],
-                i[3],
-                i[4],
-                i[5],
-                i[6],
-            )
-            if k in counts:
-                counts[k] += 1
-            else:
-                counts[k] = 1
+            counts = dict()
+            ids = []
 
-        for k, c in counts.iteritems():
-            cursor.execute(self.insert_sql % (
-                "(%s, %d)" % (k, c), c
-            ))
+            for i in cursor:
+                k = "'%s', '%s', '%s', %d, %d, %d" % (
+                    i[1].strftime("%Y-%m-%d %H:%M:00"),
+                    i[2],
+                    i[3],
+                    i[4],
+                    i[5],
+                    i[6],
+                )
+                if k in counts:
+                    counts[k] += 1
+                else:
+                    counts[k] = 1
+                ids.append(i[0])
 
-        to_update = ""
-        for i in cursor:
-            to_update = "%s, %d" % (to_update, i[0])
+            for k, c in counts.iteritems():
+                cursor.execute(self.insert_sql % (
+                    "%s, %d" % (k, c), c
+                    ))
 
-#        cursor.execute(self.update_sql % to_update)
+            cursor.execute(self.update_sql % ', '.join(map(str, ids)))
 
-#        transaction.rollback('default')
+            transaction.commit('default')
 
-#            transaction.commit('default')
-#
-#        except Exception as e:
-#            transaction.rollback('default')
-#            raise e
+            return num
+
+        except IntegrityError as e:
+            transaction.rollback('default')
+            raise e
