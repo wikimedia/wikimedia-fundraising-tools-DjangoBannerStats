@@ -208,7 +208,7 @@ class Command(BaseCommand):
                             if ua.match(m.group("useragent")):
                                 results["impression"]["ignored"] += 1
                                 continue
-                            elif "PhantomJS" in m.group("useragent"):
+                            elif phantomJS.search(m.group("useragent")):
                                 results["impression"]["ignored"] += 1
                                 continue
 

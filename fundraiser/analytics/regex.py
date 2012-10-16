@@ -201,6 +201,8 @@ ignore_uas = [
     re.compile(r"""^bot""", re.IGNORECASE),
 ]
 
+phantomJS = re.compile(r"phantomJS", re.IGNORECASE)
+
 sampled = re.compile(
     r"""
         bannerImpressions-
