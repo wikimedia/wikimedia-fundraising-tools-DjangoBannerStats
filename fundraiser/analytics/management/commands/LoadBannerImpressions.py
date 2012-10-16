@@ -71,9 +71,8 @@ class Command(BaseCommand):
 
             files = []
             if recent:
-                # TODO: lots of things
-                now = "bannerimpressions-%s*" % datetime.now().strftime("%Y%m%d-%H")
-                pasthour = "landingpages-%s*" % (datetime.now() - timedelta(hours=1)).strftime("%Y%m%d-%H")
+                now = "bannerImpressions-sampled100-%s*" % datetime.now().strftime("%Y%m%d-%H")
+                pasthour = "bannerImpressions-sampled100-%s*" % (datetime.now() - timedelta(hours=1)).strftime("%Y%m%d-%H")
 
                 files.extend(glob.glob(os.path.join(UDP_LOG_PATH, now)))
                 files.extend(glob.glob(os.path.join(UDP_LOG_PATH, pasthour)))
