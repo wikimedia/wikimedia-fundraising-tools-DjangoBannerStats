@@ -87,7 +87,7 @@ class Command(BaseCommand):
 
             for i in cursor:
                 k = "'%s', '%s', '%s', %d, %d, %d" % (
-                    i[1].strftime("%Y-%m-%d %H:%M:00"),
+                    self.roundtime([1], 5, True).strftime("%Y-%m-%d %H:%M:%S"),
                     i[2],
                     i[3],
                     i[4],
@@ -114,3 +114,13 @@ class Command(BaseCommand):
         except IntegrityError as e:
             transaction.rollback('default')
             raise e
+
+    def roundtime(self, time, minutes=1, midpoint=True):
+        # NOTE: minutes should be less than 60
+
+        time += timedelta(minutes=-(time.minute%minutes), seconds=-time.second)
+
+        if midpoint:
+            time += timedelta(seconds=minutes*60/2)
+
+        return time
