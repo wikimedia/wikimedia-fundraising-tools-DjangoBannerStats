@@ -250,6 +250,18 @@ class Command(BaseCommand):
 
                         self.debug_info = []
 
+                        country = qs["country"][0] if "country" in qs else "XX"
+
+                        if "uselang" in qs:
+                            language = qs["uselang"][0]
+                        elif "language" in qs:
+                            language = qs["language"][0]
+                        else:
+                            language = "en"
+
+                        language = lookup_language(language)
+                        country = lookup_country(country)
+
                         if "landingpage" in record.groupdict():
                             project = lookup_project("foundationwiki") # TODO: this should reflect the source project not the LP wiki
 
@@ -257,30 +269,18 @@ class Command(BaseCommand):
                             self.debug_info.append(unquote(record.group("landingpage")))
 
                             landingpage = record.group("landingpage").rsplit('/', 2)[0]
-                            country = qs["country"][0] if "country" in qs else "XX"
 
-                            if "uselang" in qs:
-                                language = qs["uselang"][0]
-                            elif "language" in qs:
-                                language = qs["language"][0]
-                            else:
-                                language = "en"
 
                             self.debug_info.append("LP: %s" % landingpage)
-
-                            language = lookup_language(language)
-                            country = lookup_country(country)
 
                         else:
                             project = lookup_project("donatewiki") # TODO: this should reflect the source project not the LP wiki
 
                             flp_vars = {
-                                "appeal" : qs["appeal"][0] if "appeal" in qs else "default",
-                                "country" : qs["country"][0] if "country" in qs else "XX",
-                                "language" : qs["uselang"][0] if "uselang" in qs else "en",
                                 "template" : qs["template"][0] if "template" in qs else "default",
-                                "form-template" : qs["form-template"][0] if "form-template" in qs else "default",
+                                "appeal" : qs["appeal"][0] if "appeal" in qs else "default",
                                 "appeal-template" : qs["appeal-template"][0] if "appeal-template" in qs else "default",
+                                "form-template" : qs["form-template"][0] if "form-template" in qs else "default",
                                 "form-countryspecific" : qs["form-countryspecific"][0] if "form-countryspecific" in qs else "default",
                             }
 
@@ -297,14 +297,13 @@ class Command(BaseCommand):
                                 flp_vars["form-template"],
                                 flp_vars["form-countryspecific"]
                             ])
-                            language = lookup_language(flp_vars["language"])
-                            country = lookup_country(flp_vars["country"])
 
                             if self.debug:
                                 if country.iso_code == "XX":
                                     if self.debug_count < 100:
                                         print "----------------------------------------"
-                                        print l[:500]
+                                        print l.strip()
+                                        print "*** COUNTRY: ", country.iso_code
                                         print "----------------------------------------"
                                         self.debug_count += 1
 
