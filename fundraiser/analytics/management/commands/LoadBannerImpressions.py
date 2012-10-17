@@ -172,7 +172,7 @@ class Command(BaseCommand):
                         results["squid"]["nomatch"] += 1
                         if self.verbose:
                             if results["squid"]["nomatch"] < 100:
-                                self.logger.info("*** NO MATCH FOR LANDING PAGE IMPRESSION ***")
+                                self.logger.info("*** NO MATCH FOR BANNER IMPRESSION ***")
                                 self.logger.info("--- File: %s | Line: %d ---" % (filename, i+1))
                                 self.logger.info(l[:500])
                                 if len(l) > 500:

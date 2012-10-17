@@ -110,10 +110,11 @@ class Command(BaseCommand):
                     self.nomatched += results["squid"]["nomatch"]
 
                     self.logger.info("DONE - %s" % f)
-                    self.logger.info("\tSQUID: %d OKAY / %d FAILED with %d IGNORED" % (
-                        int(results["squid"]["match"]),
-                        int(results["squid"]["nomatch"]),
-                        int(results["squid"]["ignored"])
+                    self.logger.info("\tSQUID: %d OKAY / %d FAILED with %d IGNORED and %d 404s" % (
+                        results["squid"]["match"],
+                        results["squid"]["nomatch"],
+                        results["squid"]["ignored"],
+                        results["squid"]["404"]
                     ))
                     self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
                         results["impression"]["match"],
@@ -147,6 +148,7 @@ class Command(BaseCommand):
                 "match" : 0,
                 "nomatch" : 0,
                 "ignored" : 0,
+                "404" : 0,
             },
             "impression" : {
                 "match" : 0,
@@ -195,6 +197,12 @@ class Command(BaseCommand):
                         if m.group("xff") == "208.80.154.6" or m.group("xff") == "208.80.152.164":
                             results["impression"]["ignored"] += 1
                             continue
+
+                        # And ignore all of our testing UA's
+                        for ua in ignore_uas:
+                            if ua.match(m.group("useragent")):
+                                results["impression"]["ignored"] += 1
+                                continue
 
 
                         record = False
@@ -250,7 +258,13 @@ class Command(BaseCommand):
 
                             landingpage = record.group("landingpage").rsplit('/', 2)[0]
                             country = qs["country"][0] if "country" in qs else "XX"
-                            language = qs["uselang"][0] if "uselang" in qs else "en"
+
+                            if "uselang" in qs:
+                                language = qs["uselang"][0]
+                            elif "language" in qs:
+                                language = qs["language"][0]
+                            else:
+                                language = "en"
 
                             self.debug_info.append("LP: %s" % landingpage)
 
