@@ -218,7 +218,7 @@ class Command(BaseCommand):
                         qs = urlparse.parse_qs(url.query, keep_blank_values=True)
 
                         country = qs["country"][0] if "country" in qs else "XX"
-                        language = qs["uselang"][0] if "uselang" in qs else "en"
+                        language = qs["userlang"][0] if "userlang" in qs else "en"
 
                         if country in self.counts["countries"]:
                             self.counts["countries"][country] += 1
