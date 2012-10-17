@@ -37,6 +37,11 @@ class Command(BaseCommand):
             type='int',
             default=1000,
             help='Batch size to be used for query operations.'),
+        make_option('', '--newest',
+            dest='newest',
+            action='store_true',
+            default=False,
+            help='Process newest first.'),
         make_option('', '--rounds',
             dest='rounds',
             type='int',
@@ -46,7 +51,7 @@ class Command(BaseCommand):
 
     help = ''
 
-    select_sql = "SELECT id, timestamp, banner, campaign, project_id, language_id, country_id, sample_rate FROM bannerimpression_raw WHERE processed = 0 LIMIT %d"
+    select_sql = "SELECT id, timestamp, banner, campaign, project_id, language_id, country_id, sample_rate FROM bannerimpression_raw WHERE processed = 0 %s LIMIT %d"
 
     insert_sql = "INSERT INTO bannerimpressions (timestamp, banner, campaign, project_id, language_id, country_id, count) VALUES (%s) ON DUPLICATE KEY update count=count+%d"
 
@@ -57,6 +62,7 @@ class Command(BaseCommand):
         starttime = datetime.now()
         self.debug = options.get('debug')
         self.verbose = options.get('verbose')
+        self.newest = options.get('newest')
         batch = options.get('batch')
         rounds = options.get('rounds')
 
@@ -76,7 +82,9 @@ class Command(BaseCommand):
         cursor = connections['default'].cursor()
 
         try:
-            num = cursor.execute(self.select_sql % batchSize)
+            orderby = self.newest if "ORDER BY id DESC" else ""
+
+            num = cursor.execute(self.select_sql % (orderby, batchSize))
 
             if num == 0:
                 transaction.commit('default')
