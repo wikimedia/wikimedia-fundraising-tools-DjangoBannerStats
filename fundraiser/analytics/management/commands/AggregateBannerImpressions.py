@@ -32,16 +32,16 @@ class Command(BaseCommand):
             action='store_true',
             default=False,
             help='Do not save. Parse only.'),
+        make_option('', '--newest',
+            dest='newest',
+            action='store_true',
+            default=False,
+            help='Do not save. Parse only.'),
         make_option('', '--batch',
             dest='batch',
             type='int',
             default=1000,
             help='Batch size to be used for query operations.'),
-        make_option('', '--newest',
-            dest='newest',
-            action='store_true',
-            default=False,
-            help='Process newest first.'),
         make_option('', '--rounds',
             dest='rounds',
             type='int',
@@ -51,7 +51,7 @@ class Command(BaseCommand):
 
     help = ''
 
-    select_sql = "SELECT id, timestamp, banner, campaign, project_id, language_id, country_id, sample_rate FROM bannerimpression_raw WHERE processed = 0 %s LIMIT %d"
+    select_sql = "SELECT id, timestamp, banner, campaign, project_id, language_id, country_id, sample_rate FROM bannerimpression_raw WHERE processed = 0 ORDER BY id %s LIMIT %d"
 
     insert_sql = "INSERT INTO bannerimpressions (timestamp, banner, campaign, project_id, language_id, country_id, count) VALUES (%s) ON DUPLICATE KEY update count=count+%d"
 
@@ -82,9 +82,10 @@ class Command(BaseCommand):
         cursor = connections['default'].cursor()
 
         try:
-            orderby = self.newest if "ORDER BY id DESC" else ""
-
-            num = cursor.execute(self.select_sql % (orderby, batchSize))
+            if self.newest:
+                num = cursor.execute(self.select_sql %  ("DESC", batchSize))
+            else:
+                num = cursor.execute(self.select_sql %  ("ASC", batchSize))
 
             if num == 0:
                 transaction.commit('default')
@@ -95,7 +96,7 @@ class Command(BaseCommand):
 
             for i in cursor:
                 k = "'%s', '%s', '%s', %d, %d, %d" % (
-                    i[1].strftime("%Y-%m-%d %H:%M:00"),
+                    self.roundtime(i[1], 5, True).strftime("%Y-%m-%d %H:%M:%S"),
                     i[2],
                     i[3],
                     i[4],
@@ -119,6 +120,16 @@ class Command(BaseCommand):
 
             return num
 
-        except IntegrityError as e:
+        except Exception as e:
             transaction.rollback('default')
             raise e
+
+    def roundtime(self, time, minutes=1, midpoint=True):
+        # NOTE: minutes should be less than 60
+
+        time += timedelta(minutes=-(time.minute%minutes), seconds=-time.second)
+
+        if midpoint:
+            time += timedelta(seconds=minutes*60/2)
+
+        return time
