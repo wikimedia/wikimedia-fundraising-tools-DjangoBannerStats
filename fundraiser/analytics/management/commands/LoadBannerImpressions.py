@@ -85,7 +85,7 @@ class Command(BaseCommand):
                     self.logger.info("Processing files matching %s" % filename)
                     files = glob.glob(filename)
 
-            for f in files:
+            for f in sorted(files):
                 path, filename_only = f.rsplit('/', 1)
                 if not os.path.isdir(f):
                     existing = SquidLog.objects.filter(filename=filename_only)
