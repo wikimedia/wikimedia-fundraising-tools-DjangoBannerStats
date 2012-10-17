@@ -87,7 +87,7 @@ class Command(BaseCommand):
 
             for i in cursor:
                 k = "'%s', '%s', '%s', %d, %d, %d" % (
-                    self.roundtime([1], 5, True).strftime("%Y-%m-%d %H:%M:%S"),
+                    self.roundtime(i[1], 5, True).strftime("%Y-%m-%d %H:%M:%S"),
                     i[2],
                     i[3],
                     i[4],
@@ -111,7 +111,7 @@ class Command(BaseCommand):
 
             return num
 
-        except IntegrityError as e:
+        except Exception as e:
             transaction.rollback('default')
             raise e
 
