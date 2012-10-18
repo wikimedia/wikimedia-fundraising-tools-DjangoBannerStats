@@ -37,6 +37,11 @@ class Command(BaseCommand):
             action='store_true',
             default=False,
             help='Do not save. Parse only.'),
+        make_option('', '--top',
+            dest='top',
+            action='store_true',
+            default=False,
+            help='Only separate out top languages and projects'),
         make_option('', '--batch',
             dest='batch',
             type='int',
@@ -57,11 +62,18 @@ class Command(BaseCommand):
 
     update_sql = "UPDATE bannerimpression_raw SET processed = 1 WHERE id IN (%s)"
 
+    detail_languages = [
+        "en", "fr", "it", "ja", "nl", "es", "ru", "hi",
+        "de", "pt", "sv", "no", "he", "da", "zh", "fi",
+        "pl", "cs", "ar", "el", "ko", "tr"
+    ]
+
 
     def handle(self, *args, **options):
         starttime = datetime.now()
         self.debug = options.get('debug')
         self.verbose = options.get('verbose')
+        self.top = options.get('top')
         self.newest = options.get('newest')
         batch = options.get('batch')
         rounds = options.get('rounds')
@@ -95,12 +107,26 @@ class Command(BaseCommand):
             ids = []
 
             for i in cursor:
+
+                proj_id = i[4]
+                lang_id = i[5]
+
+                if self.top:
+                    proj = get_project(i[4])
+                    if not proj.project[-4:] == "wiki":
+                        proj_id = lookup_project("other_project").id
+
+                    lang = get_language(i[5])
+                    if not lang.language in self.detail_languages:
+                        lang_id = lookup_language("other").id
+
+
                 k = "'%s', '%s', '%s', %d, %d, %d" % (
-                    self.roundtime(i[1], 5, True).strftime("%Y-%m-%d %H:%M:%S"),
+                    roundtime(i[1], 1, False).strftime("%Y-%m-%d %H:%M:%S"),
                     i[2],
                     i[3],
-                    i[4],
-                    i[5],
+                    proj_id,
+                    lang_id,
                     i[6],
                 )
                 if k in counts:
@@ -123,13 +149,3 @@ class Command(BaseCommand):
         except Exception as e:
             transaction.rollback('default')
             raise e
-
-    def roundtime(self, time, minutes=1, midpoint=True):
-        # NOTE: minutes should be less than 60
-
-        time += timedelta(minutes=-(time.minute%minutes), seconds=-time.second)
-
-        if midpoint:
-            time += timedelta(seconds=minutes*60/2)
-
-        return time

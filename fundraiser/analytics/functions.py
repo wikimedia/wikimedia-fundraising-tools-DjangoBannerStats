@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from fundraiser.analytics.cache import cache
 from fundraiser.analytics.models import Country, Language, Project, SquidHost
 
@@ -208,3 +210,42 @@ def lookup_squidhost(hostname=None, default="unknown", create=True, verbose=Fals
     except Warning:
         #TODO: use the default
         pass
+
+
+@cache
+def get_project(id=None):
+    if id is None:
+        raise ValueError("You must specify an id")
+
+    id = int(id)
+
+    return Project.objects.get(id=id)
+
+@cache
+def get_language(id=None):
+    if id is None:
+        raise ValueError("You must specify an id")
+
+    id = int(id)
+
+    return Language.objects.get(id=id)
+
+@cache
+def get_county(id=None):
+    if id is None:
+        raise ValueError("You must specify an id")
+
+    id = int(id)
+
+    return Country.objects.get(id=id)
+
+@cache
+def roundtime(time, minutes=1, midpoint=True):
+    # NOTE: minutes should be less than 60
+
+    time += timedelta(minutes=-(time.minute%minutes), seconds=-time.second)
+
+    if midpoint:
+        time += timedelta(seconds=minutes*60/2)
+
+    return time

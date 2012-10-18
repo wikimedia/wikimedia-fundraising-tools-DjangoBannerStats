@@ -31,6 +31,11 @@ class Command(BaseCommand):
             action='store_true',
             default=False,
             help='Provides more verbose output.'),
+        make_option('', '--top',
+            dest='top',
+            action='store_true',
+            default=False,
+            help='Only separate out top languages and projects'),
         make_option('', '--debug',
             dest='debug',
             action='store_true',
@@ -48,20 +53,27 @@ class Command(BaseCommand):
     debug_info = []
     debug_count = 0
 
+    detail_languages = [
+        "en", "fr", "it", "ja", "nl", "es", "ru", "hi",
+        "de", "pt", "sv", "no", "he", "da", "zh", "fi",
+        "pl", "cs", "ar", "el", "ko", "tr"
+    ]
+
     def handle(self, *args, **options):
         try:
             starttime = datetime.now()
             filename = options.get('filename')
             self.debug = options.get('debug')
             self.verbose = options.get('verbose')
-            recent = options.get('recent')
+            self.top = options.get('top')
+            self.recent = options.get('recent')
 
             self.matched = 0
             self.nomatched = 0
             self.ignored = 0
 
             files = []
-            if recent:
+            if self.recent:
                 now = "bannerImpressions-sampled100-%s*" % datetime.now().strftime("%Y%m%d-%H")
                 pasthour = "bannerImpressions-sampled100-%s*" % (datetime.now() - timedelta(hours=1)).strftime("%Y%m%d-%H")
 
@@ -84,10 +96,15 @@ class Command(BaseCommand):
                         self.logger.debug("Already processed %s  - skipping" % f)
                         continue
 
-                    results = self.process_file(f)
-
                     sq = SquidLog(filename=filename_only, impressiontype="banner_tmp")
                     sq.timestamp = sq.filename2timestamp()
+
+                    if sq.timestamp > datetime.date(2012, 10, 1):
+                        self.recent = True
+
+                    results = self.process_file(f)
+
+
                     if not self.debug:
                         sq.save()
 
@@ -176,36 +193,35 @@ class Command(BaseCommand):
 
                         # Go ahead and ignore SSL termination logs since they are missing GET params
                         # and are followed by a proper squid log for the request
-#                        if m.group("squid")[:3] == "ssl":
-#                            results["squid"]["ignored"] += 1
-#                            continue
-#
-#                        # Ignore 404s
-#                        if m.group("squidstatus")[-3:] == "404":
-#                            results["squid"]["404"] += 1
-#                            continue
-#
-#                        # Also ignore anything coming from ALuminium or Grosley
-#                        if m.group("client") == "208.80.154.6" or m.group("client") == "208.80.152.164":
-#                            results["impression"]["ignored"] += 1
-#                            continue
-#
-#                        # Also ignore anything forward for ALuminium or Grosley
-#                        if m.group("xff") == "208.80.154.6" or m.group("xff") == "208.80.152.164":
-#                            results["impression"]["ignored"] += 1
-#                            continue
-#
-#                        # And ignore all of our testing UA's
-#                        for ua in ignore_uas:
-#                            if ua.match(m.group("useragent")):
-#                                results["impression"]["ignored"] += 1
-#                                continue
-#                        if phantomJS.search(m.group("useragent")):
-#                            results["impression"]["ignored"] += 1
-#                            continue
+                        if m.group("squid")[:3] == "ssl":
+                            results["squid"]["ignored"] += 1
+                            continue
 
-#                        squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
-#                        seq = int(m.group("sequence"))
+                        # Ignore 404s
+                        if m.group("squidstatus")[-3:] == "404":
+                            results["squid"]["404"] += 1
+                            continue
+
+                        if self.recent:
+                            # Also ignore anything coming from Aluminium or Grosley
+                            if m.group("client") == "208.80.154.6" or m.group("client") == "208.80.152.164":
+                                results["impression"]["ignored"] += 1
+                                continue
+
+                            # Also ignore anything forward for ALuminium or Grosley
+                            if m.group("xff") == "208.80.154.6" or m.group("xff") == "208.80.152.164":
+                                results["impression"]["ignored"] += 1
+                                continue
+
+                            # And ignore all of our testing UA's
+                            for ua in ignore_uas:
+                                if ua.match(m.group("useragent")):
+                                    results["impression"]["ignored"] += 1
+                                    continue
+                            if phantomJS.search(m.group("useragent")):
+                                results["impression"]["ignored"] += 1
+                                continue
+
                         timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
                         url = urlparse.urlparse(m.group("url"))
                         qs = urlparse.parse_qs(url.query, keep_blank_values=True)
@@ -222,8 +238,17 @@ class Command(BaseCommand):
                         project = None
                         if "db" in qs:
                             project = lookup_project(qs["db"][0])
+                            if self.top and not qs["db"][-4:] == "wiki":
+                                project = lookup_project("other_project")
 
-                        language = lookup_language(language)
+                        if self.top:
+                            if language in self.detail_languages:
+                                language = lookup_language(language)
+                            else:
+                                language = lookup_language("other")
+                        else:
+                            language = lookup_language(language)
+
                         country = lookup_country(country)
 
                         if banner == "" or campaign == "" or project is None:
@@ -239,7 +264,7 @@ class Command(BaseCommand):
                         # not using the models here saves a lot of wall time
                         try:
                             k = "'%s', '%s', '%s', %d, %d, %d" % (
-                                timestamp.strftime("%Y-%m-%d %H:%M:00"),
+                                roundtime(timestamp, 1, False).strftime("%Y-%m-%d %H:%M:%S"),
                                 MySQLdb.escape_string(banner),
                                 MySQLdb.escape_string(campaign),
                                 project.id,
@@ -295,7 +320,6 @@ class Command(BaseCommand):
             return
 
         try:
-
             for k,c in impressions.iteritems():
                 cursor.execute(insert_sql % (
                     "%s, %d" % (k, c), c

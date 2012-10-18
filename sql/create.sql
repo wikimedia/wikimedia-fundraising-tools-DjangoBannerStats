@@ -104,7 +104,18 @@ CREATE TABLE IF NOT EXISTS `landingpageimpression_raw` (
   country_id      SMALLINT(3)   UNSIGNED DEFAULT NULL,
   processed       TINYINT(1)    DEFAULT 0,
 
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  INDEX (timestamp),
+  INDEX (utm_source),
+  INDEX (utm_campaign),
+  INDEX (utm_medium),
+  INDEX (utm_key),
+  INDEX (landingpage),
+  INDEX (project_id),
+  INDEX (language_id),
+  INDEX (country_id),
+  INDEX (processed),
+  UNIQUE (squid_id, squid_sequence, timestamp)
 ) DEFAULT CHARACTER SET = utf8 ENGINE = InnoDB;
 
 CREATE TABLE IF NOT EXISTS `landingpageimpressions` (
