@@ -46,10 +46,8 @@ class Command(BaseCommand):
         )
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
-    squid_sql = "INSERT INTO `squidrecord` (squid_id, sequence, timestamp) VALUES %s"
-    impression_sql = "INSERT INTO `landingpageimpression_raw` (timestamp, utm_source, utm_campaign, utm_key, utm_medium, landingpage, project_id, language_id, country_id) VALUES %s"
+    impression_sql = "INSERT INTO `landingpageimpression_raw` (timestamp, squid_id, squid_sequence, utm_source, utm_campaign, utm_key, utm_medium, landingpage, project_id, language_id, country_id) VALUES %s"
 
-    pending_squids = []
     pending_impressions = []
 
     debug_info = []
@@ -298,14 +296,14 @@ class Command(BaseCommand):
                                 flp_vars["form-countryspecific"]
                             ])
 
-                            if self.debug:
-                                if country.iso_code == "XX":
-                                    if self.debug_count < 100:
-                                        print "----------------------------------------"
-                                        print l.strip()
-                                        print "*** COUNTRY: ", country.iso_code
-                                        print "----------------------------------------"
-                                        self.debug_count += 1
+                        if self.debug:
+                            if country.iso_code == "XX":
+                                if self.debug_count < 100:
+                                    print "----------------------------------------"
+                                    print l.strip()
+                                    print "*** COUNTRY: ", country.iso_code
+                                    print "----------------------------------------"
+                                    self.debug_count += 1
 
                         if landingpage is "" or language is None or country is None or project is None:
                             # something odd does not quite match in this request
@@ -331,13 +329,10 @@ class Command(BaseCommand):
 
                         # not using the models here saves a lot of wall time
                         try:
-                            sq_tmp = "(%s, %s, '%s')" % (
+                            lp_tmp = "('%s',%d, %d, '%s', '%s', '%s', '%s', '%s', %s, %s, %s)" % (
+                                MySQLdb.escape_string(str(timestamp.strftime("%Y-%m-%d %H:%M:%S"))),
                                 MySQLdb.escape_string(str(squid.id)),
                                 MySQLdb.escape_string(str(seq)),
-                                MySQLdb.escape_string(str(timestamp.strftime("%Y-%m-%d %H:%M:%S")))
-                            )
-                            lp_tmp = "('%s', '%s', '%s', '%s', '%s', '%s', %s, %s, %s)" % (
-                                MySQLdb.escape_string(str(timestamp.strftime("%Y-%m-%d %H:%M:%S"))),
                                 MySQLdb.escape_string(utm_source),
                                 MySQLdb.escape_string(utm_campaign),
                                 MySQLdb.escape_string(utm_key),
@@ -347,7 +342,6 @@ class Command(BaseCommand):
                                 MySQLdb.escape_string(str(language.id)),
                                 MySQLdb.escape_string(str(country.id))
                             )
-                            self.pending_squids.append(sq_tmp)
                             self.pending_impressions.append(lp_tmp)
 
                         except Exception:
@@ -356,18 +350,16 @@ class Command(BaseCommand):
                             self.logger.error("********************\n%s\n********************" % l)
 
                         finally:
-                            sq_tmp = ""
                             lp_tmp = ""
 
                         # write the models in batch
-                        if len(self.pending_squids) % batch_size == 0:
+                        if len(self.pending_impressions) % batch_size == 0:
                             try:
                                 if not self.debug:
-                                    self.write(self.pending_squids, self.pending_impressions)
+                                    self.write(self.pending_impressions)
                             except Exception:
                                 self.logger.exception("Error writing impressions to the database")
                             finally:
-                                self.pending_squids = []
                                 self.pending_impressions = []
 
                 except Exception as e:
@@ -378,8 +370,7 @@ class Command(BaseCommand):
             try:
                 # write out any remaining records
                 if not self.debug:
-                    self.write(self.pending_squids, self.pending_impressions)
-                self.pending_squids = []
+                    self.write(self.pending_impressions)
                 self.pending_impressions = []
 
             except Exception as e:
@@ -396,7 +387,7 @@ class Command(BaseCommand):
         return results
 
     @transaction.commit_manually
-    def write(self, squids, impressions):
+    def write(self, impressions):
         """
         Commits a batch of transactions. Attempts a single query per model by splitting the
         tuples of each banner impression and grouping by model.  If that fails, the function
@@ -404,31 +395,26 @@ class Command(BaseCommand):
         """
         cursor = connections['default'].cursor()
 
-        s_len = len(squids)
         i_len = len(impressions)
 
-        if s_len != i_len:
-            raise Exception("Length mismatch between squid records and landing page impressions")
-
-        if not s_len:
+        if not i_len:
             return
 
         try:
             # attempt to create all in batches
-            cursor.execute(self.squid_sql % ', '.join(squids))
             cursor.execute(self.impression_sql % ', '.join(impressions))
 
             transaction.commit('default')
 
         except IntegrityError as e:
-            # someone was not happy, likely a SquidRecord
+            # some impression was not happy
             transaction.rollback('default')
 
-            if s_len == 1 or i_len == 1:
+            if i_len == 1:
                 return
 
-            for i in range(s_len):
-                self.write([squids[i]], [impressions[i]])
+            for i in impressions:
+                self.write([i])
 
         except Exception as e:
             transaction.rollback()
@@ -436,14 +422,13 @@ class Command(BaseCommand):
             self.logger.exception("UNHANDLED EXCEPTION")
 
             if self.debug:
-                self.logger.info(self.squid_sql % ', '.join(squids))
                 self.logger.info(self.impression_sql % ', '.join(impressions))
 
                 for r in self.debug_info:
                     self.logger.info("\t%s" % r)
 
-            if s_len == 1 or i_len == 1:
+            if i_len == 1:
                 return
 
-            for i in range(s_len):
-                self.write([squids[i]], [impressions[i]])
+            for i in impressions:
+                self.write([i])
