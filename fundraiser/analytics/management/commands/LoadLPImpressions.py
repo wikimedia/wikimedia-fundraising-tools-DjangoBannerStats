@@ -320,7 +320,7 @@ class Command(BaseCommand):
 
                         # not using the models here saves a lot of wall time
                         try:
-                            lp_tmp = "('%s',%d, %d, '%s', '%s', '%s', '%s', '%s', %s, %s, %s)" % (
+                            lp_tmp = "('%s',%s, %s, '%s', '%s', '%s', '%s', '%s', %s, %s, %s)" % (
                                 MySQLdb.escape_string(str(timestamp.strftime("%Y-%m-%d %H:%M:%S"))),
                                 MySQLdb.escape_string(str(squid.id)),
                                 MySQLdb.escape_string(str(seq)),
