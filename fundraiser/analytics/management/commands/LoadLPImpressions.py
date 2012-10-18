@@ -10,7 +10,6 @@ import logging
 import MySQLdb
 from optparse import make_option
 import os
-import traceback
 from urllib import unquote
 import urlparse
 
@@ -43,10 +42,17 @@ class Command(BaseCommand):
             action='store_true',
             default=False,
             help='Process recent logs.'),
+        make_option('', '--alt',
+            dest='alt',
+            action='store_true',
+            default=False,
+            help="Save to alternate tables.  Allows for reprocessing and then a table rename."
+                "NOTE: This requires the associated SquidLog records to be removed."
         )
+    )
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
-    impression_sql = "INSERT INTO `landingpageimpression_raw` (timestamp, squid_id, squid_sequence, utm_source, utm_campaign, utm_key, utm_medium, landingpage, project_id, language_id, country_id) VALUES %s"
+    impression_sql = "INSERT INTO `landingpageimpression_raw%s` (timestamp, squid_id, squid_sequence, utm_source, utm_campaign, utm_key, utm_medium, landingpage, project_id, language_id, country_id) VALUES %s"
 
     pending_impressions = []
 
@@ -64,17 +70,18 @@ class Command(BaseCommand):
             filename = options.get('filename')
             self.debug = options.get('debug')
             self.verbose = options.get('verbose')
-            recent = options.get('recent')
+            self.recent = options.get('recent')
+            self.alt = options.get('alt')
 
             self.matched = 0
             self.nomatched = 0
             self.ignored = 0
 
-            files = []
-            if recent:
-                # now = "landingpages-%s*" % datetime.now().strftime("%Y-%m-%d-%I%p")
-                # pasthour = "landingpages-%s*" % (datetime.now() - timedelta(hours=1)).strftime("%Y-%m-%d-%I%p")
+            if self.alt:
+                self.impression_sql = self.impression_sql % ("_alt", "%s")
 
+            files = []
+            if self.recent:
                 now = "landingpages-%s*" % datetime.now().strftime("%Y%m%d-%H")
                 pasthour = "landingpages-%s*" % (datetime.now() - timedelta(hours=1)).strftime("%Y%m%d-%H")
 
@@ -84,7 +91,7 @@ class Command(BaseCommand):
                 if os.path.isdir(filename):
                     self.logger.info("Processing directory")
                     filename = filename.rstrip('/')
-                    files = glob.glob("%s/*.gz" % filename)
+                    files = glob.glob("%s/landingpages*.gz" % filename)
                 else:
                     self.logger.info("Processing files matching %s" % filename)
                     files = glob.glob(filename)
@@ -161,7 +168,7 @@ class Command(BaseCommand):
         file = gzip.open(filename, 'rb')
         try:
             i = 0
-#        with gzip.open(filename, 'rb') as file: # incompatible with python2.6
+
             for l in file:
                 i += 1
                 try:
@@ -262,14 +269,7 @@ class Command(BaseCommand):
 
                         if "landingpage" in record.groupdict():
                             project = lookup_project("foundationwiki") # TODO: this should reflect the source project not the LP wiki
-
-                            self.debug_info.append(record.group("landingpage"))
-                            self.debug_info.append(unquote(record.group("landingpage")))
-
                             landingpage = record.group("landingpage").rsplit('/', 2)[0]
-
-
-                            self.debug_info.append("LP: %s" % landingpage)
 
                         else:
                             project = lookup_project("donatewiki") # TODO: this should reflect the source project not the LP wiki
@@ -295,15 +295,6 @@ class Command(BaseCommand):
                                 flp_vars["form-template"],
                                 flp_vars["form-countryspecific"]
                             ])
-
-                        if self.debug:
-                            if country.iso_code == "XX":
-                                if self.debug_count < 100:
-                                    print "----------------------------------------"
-                                    print l.strip()
-                                    print "*** COUNTRY: ", country.iso_code
-                                    print "----------------------------------------"
-                                    self.debug_count += 1
 
                         if landingpage is "" or language is None or country is None or project is None:
                             # something odd does not quite match in this request
@@ -403,7 +394,6 @@ class Command(BaseCommand):
         try:
             # attempt to create all in batches
             cursor.execute(self.impression_sql % ', '.join(impressions))
-
             transaction.commit('default')
 
         except IntegrityError as e:
