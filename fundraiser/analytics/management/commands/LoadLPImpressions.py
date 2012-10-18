@@ -335,6 +335,7 @@ class Command(BaseCommand):
                                 MySQLdb.escape_string(str(language.id)),
                                 MySQLdb.escape_string(str(country.id))
                             )
+                            lp_tmp = lp_tmp.replace("%", "")
                             self.pending_impressions.append(lp_tmp)
 
                         except Exception:
