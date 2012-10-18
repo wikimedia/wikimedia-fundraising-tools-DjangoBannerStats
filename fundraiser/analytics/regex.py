@@ -123,6 +123,7 @@ landingpages_ignore = [
               | Donate/Stories
               | Donate/Thank_You
               | Donate/Transparency
+              | SOPA/Blackoutpage
 
             )
         """, re.VERBOSE | re.IGNORECASE
