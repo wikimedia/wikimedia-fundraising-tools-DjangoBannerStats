@@ -99,7 +99,7 @@ class Command(BaseCommand):
             for f in files:
                 path, filename_only = f.rsplit('/', 1)
                 if not os.path.isdir(f):
-                    existing = SquidLog.objects.filter(filename=filename_only)
+                    existing = SquidLog.objects.filter(filename=filename_only, impressiontype="landingpage")
                     if existing:
                         self.logger.debug("Already processed %s  - skipping" % f)
                         continue
