@@ -316,6 +316,10 @@ class Command(BaseCommand):
                             if len(landingpage) > lp_max:
                                 landingpage = landingpage[:lp_max]
 
+                        # truncate to db max lengths
+                        utm_campaign = utm_campaign[:255]
+                        utm_source = utm_source[:255]
+
                         squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
                         seq = int(m.group("sequence"))
                         timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
