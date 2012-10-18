@@ -79,6 +79,8 @@ class Command(BaseCommand):
 
             if self.alt:
                 self.impression_sql = self.impression_sql % ("_alt", "%s")
+            else:
+                self.impression_sql = self.impression_sql % ("", "%s")
 
             files = []
             if self.recent:
