@@ -135,3 +135,16 @@ CREATE TABLE IF NOT EXISTS `landingpageimpressions` (
           landingpage, project_id, language_id, country_id) -- WE SHOULD OPTIMIZE THIS KEY, WHAT ORDER IS BEST?
 ) DEFAULT CHARACTER SET = utf8 ENGINE = InnoDB;
 
+CREATE TABLE IF NOT EXISTS `globalcollect_orderids` (
+  orderid         BIGINT(11)       UNSIGNED NOT NULL,
+
+  PRIMARY KEY (orderid)
+) DEFAULT CHARACTER SET = utf8 ENGINE = InnoDB;
+
+CREATE TABLE IF NOT EXISTS `globalcollect_orderids_unused` (
+  orderid         BIGINT(11)  UNSIGNED NOT NULL,
+  allocated       TINYINT(1)  UNSIGNED DEFAULT 0,
+
+  PRIMARY KEY (orderid),
+  INDEX (allocated)
+) DEFAULT CHARACTER SET = utf8 ENGINE = InnoDB;

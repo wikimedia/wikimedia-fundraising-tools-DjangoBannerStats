@@ -99,11 +99,10 @@ class Command(BaseCommand):
                     sq = SquidLog(filename=filename_only, impressiontype="banner_tmp")
                     sq.timestamp = sq.filename2timestamp()
 
-                    if sq.timestamp > datetime.date(2012, 10, 1):
+                    if sq.timestamp > datetime.datetime(2012, 10, 1):
                         self.recent = True
 
                     results = self.process_file(f)
-
 
                     if not self.debug:
                         sq.save()
@@ -158,8 +157,6 @@ class Command(BaseCommand):
                 "error" : 0
             }
         }
-
-        batch_size = 1500
 
         sample_rate = 1
 
@@ -308,7 +305,6 @@ class Command(BaseCommand):
 
         return results
 
-
     @transaction.commit_manually
     def write(self, impressions):
 
@@ -325,29 +321,14 @@ class Command(BaseCommand):
                     "%s, %d" % (k, c), c
                     ))
 
-            transaction.commit('default')
-
-        except IntegrityError as e:
-            # some impression was not happy
-            transaction.rollback('default')
-
-            for k,c in impressions.iteritems():
-                self.write( { k : c } )
-
         except Exception as e:
-            transaction.rollback()
-
-            self.logger.exception("UNHANDLED EXCEPTION")
-
+            import sys
+            transaction.rollback("default")
+            self.logger.exception("UNHANDLED EXCEPTION: %s" % str(e))
+            self.logger.exception(sys.exc_info()[0])
             if self.debug:
                 if len(impressions) == 1:
                     self.logger.info(impressions)
 
                 for r in self.debug_info:
                     self.logger.info("\t%s" % r)
-
-            if len(impressions) == 1:
-                return
-
-            for k,c in impressions.iteritems():
-                self.write( { k : c } )
