@@ -96,7 +96,7 @@ class Command(BaseCommand):
                         self.logger.debug("Already processed %s  - skipping" % f)
                         continue
 
-                    sq = SquidLog(filename=filename_only, impressiontype="banner_tmp")
+                    sq = SquidLog(filename=filename_only, impressiontype="banner")
                     sq.timestamp = sq.filename2timestamp()
 
                     if sq.timestamp > datetime(2012, 10, 1):
