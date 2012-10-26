@@ -308,7 +308,7 @@ class Command(BaseCommand):
     @transaction.commit_manually
     def write(self, impressions):
 
-        insert_sql = "INSERT INTO bannerimpressions_tmp (timestamp, banner, campaign, project_id, language_id, country_id, count) VALUES (%s) ON DUPLICATE KEY update count=count+%d"
+        insert_sql = "INSERT INTO bannerimpressions (timestamp, banner, campaign, project_id, language_id, country_id, count) VALUES (%s) ON DUPLICATE KEY update count=count+%d"
 
         cursor = connections['default'].cursor()
 
