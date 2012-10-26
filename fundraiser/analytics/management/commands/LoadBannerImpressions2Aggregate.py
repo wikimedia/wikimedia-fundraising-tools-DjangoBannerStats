@@ -320,6 +320,7 @@ class Command(BaseCommand):
                 cursor.execute(insert_sql % (
                     "%s, %d" % (k, c), c
                     ))
+                transaction.commit('default')
 
         except Exception as e:
             import sys
