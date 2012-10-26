@@ -99,7 +99,7 @@ class Command(BaseCommand):
                     sq = SquidLog(filename=filename_only, impressiontype="banner_tmp")
                     sq.timestamp = sq.filename2timestamp()
 
-                    if sq.timestamp > datetime.datetime(2012, 10, 1):
+                    if sq.timestamp > datetime(2012, 10, 1):
                         self.recent = True
 
                     results = self.process_file(f)
