@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from django.db import connections, transaction
+from django.db import connections, transaction, reset_queries
 from django.db.utils import IntegrityError
 
 import gc
@@ -287,10 +287,9 @@ class Command(BaseCommand):
                     self.logger.error("********************\n%s\n********************" % l.strip())
 
             try:
-                # write out any remaining records
                 if not self.debug:
                     self.write(counts)
-                self.counts = dict()
+                del counts
 
             except Exception as e:
                 self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
@@ -302,6 +301,7 @@ class Command(BaseCommand):
             file.close()
 
         gc.collect()
+        reset_queries()
 
         return results
 
