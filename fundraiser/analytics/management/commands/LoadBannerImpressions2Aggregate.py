@@ -313,7 +313,7 @@ class Command(BaseCommand):
         del counts, file
 
         gc.collect()
-        muppy.print_summary()
+#        muppy.print_summary()
 
         reset_queries()
 
