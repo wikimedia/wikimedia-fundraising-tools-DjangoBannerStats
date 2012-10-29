@@ -2,6 +2,8 @@ from django.core.management.base import BaseCommand
 from django.db import connections, transaction, reset_queries
 from django.db.utils import IntegrityError
 
+from pympler import muppy
+
 import gc
 from datetime import datetime, timedelta
 import glob
@@ -60,6 +62,8 @@ class Command(BaseCommand):
     ]
 
     def handle(self, *args, **options):
+#        gc.set_debug(gc.DEBUG_LEAK)
+
         try:
             starttime = datetime.now()
             filename = options.get('filename')
@@ -254,8 +258,9 @@ class Command(BaseCommand):
                                 results["impression"]["ignored"] += 1
                                 continue
                             results["impression"]["error"] += 1
-                            self.logger.exception("** INVALID BANNER IMPRESSION - NOT ENOUGH DATA TO RECORD **")
-                            self.logger.error("********************\n%s\n********************" % l.strip())
+                            if self.verbose:
+                                self.logger.exception("** INVALID BANNER IMPRESSION - NOT ENOUGH DATA TO RECORD **")
+                                self.logger.error("********************\n%s\n********************" % l.strip())
                             continue
 
                         # not using the models here saves a lot of wall time
@@ -280,16 +285,21 @@ class Command(BaseCommand):
                             self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING BANNER IMPRESSION **")
                             self.logger.error("********************\n%s\n********************" % l.strip())
 
+                        finally:
+                            del m, url, qs, k
+                            del timestamp, banner, campaign, project, language, country
 
-                except Exception as e:
+                except Exception:
                     results["impression"]["error"] += 1
                     self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING BANNER IMPRESSION **")
                     self.logger.error("********************\n%s\n********************" % l.strip())
 
+                finally:
+                    del l
+
             try:
                 if not self.debug:
                     self.write(counts)
-                del counts
 
             except Exception as e:
                 self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
@@ -300,7 +310,11 @@ class Command(BaseCommand):
         finally:
             file.close()
 
+        del counts, file
+
         gc.collect()
+        muppy.print_summary()
+
         reset_queries()
 
         return results
@@ -333,3 +347,7 @@ class Command(BaseCommand):
 
                 for r in self.debug_info:
                     self.logger.info("\t%s" % r)
+        finally:
+            reset_queries()
+            del impressions
+            del cursor

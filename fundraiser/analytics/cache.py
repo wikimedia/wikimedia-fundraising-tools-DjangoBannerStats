@@ -13,6 +13,7 @@ def cache(func):
         except KeyError:
             # nothing was cached for those args. let's fix that.
             result = stored_results[key] = func(*args, **kwargs)
+            del key
             return result
 
     return cached

@@ -239,7 +239,7 @@ def get_county(id=None):
 
     return Country.objects.get(id=id)
 
-@cache
+# DO NOT CACHE
 def roundtime(time, minutes=1, midpoint=True):
     # NOTE: minutes should be less than 60
 
