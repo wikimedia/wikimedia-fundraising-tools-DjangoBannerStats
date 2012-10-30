@@ -204,6 +204,11 @@ class Command(BaseCommand):
                             continue
 
                         if self.recent:
+                            # yeah, ignore this too
+                            if "Special:BannerRandom" in m.group("url"):
+                                results["impression"]["ignored"] += 1
+                                continue
+
                             # Also ignore anything coming from Aluminium or Grosley
                             if m.group("client") == "208.80.154.6" or m.group("client") == "208.80.152.164":
                                 results["impression"]["ignored"] += 1
@@ -223,7 +228,10 @@ class Command(BaseCommand):
                                 results["impression"]["ignored"] += 1
                                 continue
 
-                        timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
+                        try:
+                            timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
+                        except ValueError:
+                            timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S")
                         url = urlparse.urlparse(m.group("url"))
                         qs = urlparse.parse_qs(url.query, keep_blank_values=True)
 

@@ -187,6 +187,11 @@ class Command(BaseCommand):
                             results["squid"]["ignored"] += 1
                             continue
 
+                        # yeah, ignore this too
+                        if "Special:BannerRandom" in m.group("url"):
+                            results["impression"]["ignored"] += 1
+                            continue
+
                         # Ignore 404s
                         if m.group("squidstatus")[-3:] == "404":
                             results["squid"]["404"] += 1
@@ -213,7 +218,10 @@ class Command(BaseCommand):
 
                         squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
                         seq = int(m.group("sequence"))
-                        timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
+                        try:
+                            timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
+                        except ValueError:
+                            timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S")
                         url = urlparse.urlparse(m.group("url"))
                         qs = urlparse.parse_qs(url.query, keep_blank_values=True)
 
