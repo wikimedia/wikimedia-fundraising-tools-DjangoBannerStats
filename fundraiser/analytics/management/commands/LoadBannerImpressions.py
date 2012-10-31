@@ -153,7 +153,7 @@ class Command(BaseCommand):
                 "ignored" : 0,
                 "error" : 0,
             },
-            "detail" : {
+            "details" : {
                 "squid" : {
                     "ignored" : {
                         "ssl" : 0,
@@ -206,7 +206,7 @@ class Command(BaseCommand):
                         # and are followed by a proper squid log for the request
                         if m.group("squid")[:3] == "ssl":
                             results["squid"]["ignored"] += 1
-                            results["detail"]["squid"]["ignored"]["ssl"] += 1
+                            results["details"]["squid"]["ignored"]["ssl"] += 1
                             continue
 
                         # yeah, ignore this too
