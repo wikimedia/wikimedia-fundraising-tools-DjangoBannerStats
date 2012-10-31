@@ -117,6 +117,10 @@ class Command(BaseCommand):
                         results["impression"]["error"],
                         ))
 
+                    if self.verbose:
+                        import pprint
+                        self.logger.info(pprint.pformat(results["details"]))
+
             endtime = datetime.now()
             self.logger.info("DONE")
             self.logger.info("Total squid matched: %d" % self.matched)
@@ -147,8 +151,25 @@ class Command(BaseCommand):
                 "match" : 0,
                 "nomatch" : 0,
                 "ignored" : 0,
-                "error" : 0
-            }
+                "error" : 0,
+            },
+            "detail" : {
+                "squid" : {
+                    "ignored" : {
+                        "ssl" : 0,
+                    },
+                },
+                "impression" : {
+                    "ignored" : {
+                        "BannerRandom" : 0,
+                        "BannerController" : 0,
+                        "client" : 0,
+                        "xff" : 0,
+                        "useragent" : 0,
+                        "PhantomJS" : 0,
+                    },
+                },
+            },
         }
 
         batch_size = 1500
@@ -185,11 +206,13 @@ class Command(BaseCommand):
                         # and are followed by a proper squid log for the request
                         if m.group("squid")[:3] == "ssl":
                             results["squid"]["ignored"] += 1
+                            results["detail"]["squid"]["ignored"]["ssl"] += 1
                             continue
 
                         # yeah, ignore this too
                         if "Special:BannerRandom" in m.group("url"):
                             results["impression"]["ignored"] += 1
+                            results["details"]["impression"]["ignored"]["BannerRandom"] += 1
                             continue
 
                         # Ignore 404s
@@ -200,20 +223,24 @@ class Command(BaseCommand):
                         # Also ignore anything coming from ALuminium or Grosley
                         if m.group("client") == "208.80.154.6" or m.group("client") == "208.80.152.164":
                             results["impression"]["ignored"] += 1
+                            results["details"]["impression"]["ignored"]["client"] += 1
                             continue
 
                         # Also ignore anything forward for ALuminium or Grosley
                         if m.group("xff") == "208.80.154.6" or m.group("xff") == "208.80.152.164":
                             results["impression"]["ignored"] += 1
+                            results["details"]["impression"]["ignored"]["xff"] += 1
                             continue
 
                         # And ignore all of our testing UA's
                         for ua in ignore_uas:
                             if ua.match(m.group("useragent")):
                                 results["impression"]["ignored"] += 1
+                                results["details"]["impression"]["ignored"]["useragent"] += 1
                                 continue
                         if phantomJS.search(m.group("useragent")):
                             results["impression"]["ignored"] += 1
+                            results["details"]["impression"]["ignored"]["PhantomJS"] += 1
                             continue
 
                         squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
@@ -255,6 +282,7 @@ class Command(BaseCommand):
                             if "BannerController" in l:
                                 # we really don't care about these, so there is no need to log them as errors
                                 results["impression"]["ignored"] += 1
+                                results["details"]["impression"]["ignored"]["BannerController"] += 1
                                 continue
                             results["impression"]["error"] += 1
                             self.logger.exception("** INVALID BANNER IMPRESSION - NOT ENOUGH DATA TO RECORD **")
