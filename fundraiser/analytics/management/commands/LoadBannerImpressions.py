@@ -298,7 +298,7 @@ class Command(BaseCommand):
                         language = lookup_language(language)
                         country = lookup_country(country)
 
-                        if "result" in qs and qs["result"] == "hide":
+                        if "result" in qs and qs["result"][0] == "hide":
                             if not self.hidden:
                                 continue # keep calm and continue on
 
@@ -307,7 +307,7 @@ class Command(BaseCommand):
                                 self.logger.exception("** INVALID HIDDEN BANNER IMPRESSION - NOT ENOUGH DATA TO RECORD **")
                                 self.logger.error("********************\n%s\n********************" % l.strip())
                                 continue
-                            reason = qs["reason"]
+                            reason = qs["reason"][0]
 
                             results["impression"]["hidden"] += 1
 
