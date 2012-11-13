@@ -330,9 +330,9 @@ class Command(BaseCommand):
                                     MySQLdb.escape_string(timestamp.strftime("%Y-%m-%d %H:%M:%S")),
                                     squid.id,
                                     seq,
-                                    project.id,
-                                    language.id,
-                                    country.id,
+                                    project.id if not project is None else project,
+                                    language.id if not language is None else language,
+                                    country.id if not country is None else country,
                                     sample_rate
                                 )
                                 self.pending_hidden.append(hidden_tmp)
