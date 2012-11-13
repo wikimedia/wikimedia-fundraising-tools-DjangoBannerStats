@@ -322,6 +322,8 @@ class Command(BaseCommand):
                                 country = None
                             if not "language" in qs:
                                 language = None
+                            if not "db" in qs:
+                                project = None
 
                             try:
                                 hidden_tmp = "('%s', %d, %d, %d, %d, %d, %d)" % (
