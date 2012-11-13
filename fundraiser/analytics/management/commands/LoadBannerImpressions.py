@@ -41,13 +41,21 @@ class Command(BaseCommand):
             action='store_true',
             default=False,
             help='Process recent logs.'),
+        make_option('', '--hidden',
+            dest='hidden',
+            action='store_true',
+            default=False,
+            help='Parse records for hidden logs.'),
         )
 
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
     impression_sql = "INSERT INTO `bannerimpression_raw` (timestamp, squid_id, squid_sequence, banner, campaign, project_id, language_id, country_id, sample_rate) VALUES %s"
 
+    hidden_impression_sql = "INSERT INTO `hiddenbannerimpression_raw` (timestamp, squid_id, squid_sequence, project_id, language_id, country_id, sample_rate) VALUES %s"
+
     pending_impressions = []
+    pending_hidden = []
 
     debug_info = []
     debug_count = 0
@@ -61,6 +69,7 @@ class Command(BaseCommand):
         try:
             starttime = datetime.now()
             filename = options.get('filename')
+            self.hidden = options.get('hidden')
             self.debug = options.get('debug')
             self.verbose = options.get('verbose')
             recent = options.get('recent')
@@ -110,9 +119,10 @@ class Command(BaseCommand):
                         int(results["squid"]["ignored"]),
                         int(results["squid"]["404"])
                         ))
-                    self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
+                    self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d HIDDEN / %d IGNORED / %d ERROR" % (
                         results["impression"]["match"],
                         results["impression"]["nomatch"],
+                        results["impression"]["hidden"],
                         results["impression"]["ignored"],
                         results["impression"]["error"],
                         ))
@@ -150,6 +160,7 @@ class Command(BaseCommand):
             "impression" : {
                 "match" : 0,
                 "nomatch" : 0,
+                "hidden" : 0,
                 "ignored" : 0,
                 "error" : 0,
             },
@@ -168,6 +179,10 @@ class Command(BaseCommand):
                         "useragent" : 0,
                         "PhantomJS" : 0,
                     },
+                    "hidden" : {
+                        "cookie" : 0,
+                        "empty" : 0,
+                    }
                 },
             },
         }
@@ -245,10 +260,15 @@ class Command(BaseCommand):
 
                         squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
                         seq = int(m.group("sequence"))
-                        try:
+
+
+                        if re.match(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]+", m.group("timestamp")):
                             timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
-                        except ValueError:
+                        elif re.match(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}", m.group("timestamp")):
                             timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S")
+                        else:
+                            raise ValueError("Unknown timestamp format: %s" % m.group("timestamp"))
+
                         url = urlparse.urlparse(m.group("url"))
                         qs = urlparse.parse_qs(url.query, keep_blank_values=True)
 
@@ -278,50 +298,105 @@ class Command(BaseCommand):
                         language = lookup_language(language)
                         country = lookup_country(country)
 
-                        if banner == "" or campaign == "" or project is None:
-                            if "BannerController" in l:
-                                # we really don't care about these, so there is no need to log them as errors
-                                results["impression"]["ignored"] += 1
-                                results["details"]["impression"]["ignored"]["BannerController"] += 1
+                        if "result" in qs and qs["result"] == "hide":
+                            if not self.hidden:
+                                continue # keep calm and continue on
+
+                            if not "reason" in qs:
+                                results["impression"]["error"] += 1
+                                self.logger.exception("** INVALID HIDDEN BANNER IMPRESSION - NOT ENOUGH DATA TO RECORD **")
+                                self.logger.error("********************\n%s\n********************" % l.strip())
                                 continue
-                            results["impression"]["error"] += 1
-                            self.logger.exception("** INVALID BANNER IMPRESSION - NOT ENOUGH DATA TO RECORD **")
-                            self.logger.error("********************\n%s\n********************" % l.strip())
-                            continue
+                            reason = qs["reason"]
 
-                        # not using the models here saves a lot of wall time
-                        try:
-                            banner_tmp = "('%s', %d, %d, '%s', '%s', %d, %d, %d, %d)" % (
-                                MySQLdb.escape_string(timestamp.strftime("%Y-%m-%d %H:%M:%S")),
-                                squid.id,
-                                seq,
-                                MySQLdb.escape_string(banner),
-                                MySQLdb.escape_string(campaign),
-                                project.id,
-                                language.id,
-                                country.id,
-                                sample_rate
-                                )
-                            self.pending_impressions.append(banner_tmp)
-                            results["impression"]["match"] += 1
+                            results["impression"]["hidden"] += 1
 
-                        except Exception:
-                            results["impression"]["error"] += 1
-                            self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING BANNER IMPRESSION **")
-                            self.logger.error("********************\n%s\n********************" % l.strip())
+                            if not reason in results["details"]["impression"]["hidden"]:
+                                results["details"]["impression"]["hidden"][reason] = 0
+                            results["details"]["impression"]["hidden"][reason] += 1
 
-                        finally:
-                            banner_tmp = ""
+                            if reason == "empty":
+                                continue # no need to save empties in the database -- we would explode
 
-                        # write the models in batch
-                        if len(self.pending_impressions) % batch_size == 0:
+                            if not "country" in qs:
+                                country = None
+                            if not "language" in qs:
+                                language = None
+
                             try:
-                                if not self.debug:
-                                    self.write(self.pending_impressions)
+                                hidden_tmp = "('%s', %d, %d, %d, %d, %d, %d)" % (
+                                    MySQLdb.escape_string(timestamp.strftime("%Y-%m-%d %H:%M:%S")),
+                                    squid.id,
+                                    seq,
+                                    project.id,
+                                    language.id,
+                                    country.id,
+                                    sample_rate
+                                )
+                                self.pending_hidden.append(hidden_tmp)
                             except Exception:
-                                self.logger.exception("Error writing impressions to the database")
+                                results["impression"]["error"] += 1
+                                self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING BANNER IMPRESSION **")
+                                self.logger.error("********************\n%s\n********************" % l.strip())
+
                             finally:
-                                self.pending_impressions = []
+                                hidden_tmp = ""
+
+                            # write the models in batch
+                            if len(self.pending_hidden) % batch_size == 0:
+                                try:
+                                    if not self.debug:
+                                        self.write_hidden(self.pending_hidden)
+                                except Exception:
+                                    self.logger.exception("Error writing hidden impressions to the database")
+                                finally:
+                                    self.pending_hidden = []
+
+                        else:
+                            if banner == "" or campaign == "" or project is None:
+                                if "BannerController" in l:
+                                    # we really don't care about these, so there is no need to log them as errors
+                                    results["impression"]["ignored"] += 1
+                                    results["details"]["impression"]["ignored"]["BannerController"] += 1
+                                    continue
+                                results["impression"]["error"] += 1
+                                self.logger.exception("** INVALID BANNER IMPRESSION - NOT ENOUGH DATA TO RECORD **")
+                                self.logger.error("********************\n%s\n********************" % l.strip())
+                                continue
+
+                            # not using the models here saves a lot of wall time
+                            try:
+                                banner_tmp = "('%s', %d, %d, '%s', '%s', %d, %d, %d, %d)" % (
+                                    MySQLdb.escape_string(timestamp.strftime("%Y-%m-%d %H:%M:%S")),
+                                    squid.id,
+                                    seq,
+                                    MySQLdb.escape_string(banner),
+                                    MySQLdb.escape_string(campaign),
+                                    project.id,
+                                    language.id,
+                                    country.id,
+                                    sample_rate
+                                    )
+                                self.pending_impressions.append(banner_tmp)
+                                results["impression"]["match"] += 1
+
+                            except Exception:
+                                results["impression"]["error"] += 1
+                                self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING BANNER IMPRESSION **")
+                                self.logger.error("********************\n%s\n********************" % l.strip())
+
+                            finally:
+                                banner_tmp = ""
+
+                            # write the models in batch
+                            if len(self.pending_impressions) % batch_size == 0:
+                                try:
+                                    if not self.debug:
+                                        self.write(self.pending_impressions)
+                                except Exception:
+                                    self.logger.exception("Error writing impressions to the database")
+                                finally:
+                                    self.pending_impressions = []
 
                 except Exception as e:
                     results["impression"]["error"] += 1
@@ -332,7 +407,10 @@ class Command(BaseCommand):
                 # write out any remaining records
                 if not self.debug:
                     self.write(self.pending_impressions)
+                    if self.hidden:
+                        self.write_hidden(self.pending_hidden)
                 self.pending_impressions = []
+                self.pending_hidden = []
 
             except Exception as e:
                 self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
@@ -365,6 +443,53 @@ class Command(BaseCommand):
         try:
             # attempt to create all in batches
             cursor.execute(self.impression_sql % ', '.join(impressions))
+
+            transaction.commit('default')
+
+        except IntegrityError as e:
+            # some impression was not happy
+            transaction.rollback('default')
+
+            if i_len == 1:
+                return
+
+            for i in impressions:
+                self.write([i])
+
+        except Exception as e:
+            transaction.rollback()
+
+            self.logger.exception("UNHANDLED EXCEPTION")
+
+            if self.debug:
+                self.logger.info(self.impression_sql % ', '.join(impressions))
+
+                for r in self.debug_info:
+                    self.logger.info("\t%s" % r)
+
+            if i_len == 1:
+                return
+
+            for i in impressions:
+                self.write([i])
+
+    @transaction.commit_manually
+    def write_hidden(self, impressions):
+        """
+        Commits a batch of transactions. Attempts a single query per model by splitting the
+        tuples of each banner impression and grouping by model.  If that fails, the function
+        falls back to a single transaction per banner impression
+        """
+        cursor = connections['default'].cursor()
+
+        i_len = len(impressions)
+
+        if not i_len:
+            return
+
+        try:
+            # attempt to create all in batches
+            cursor.execute(self.hidden_impression_sql % ', '.join(impressions))
 
             transaction.commit('default')
 
