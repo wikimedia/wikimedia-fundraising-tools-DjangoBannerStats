@@ -326,7 +326,7 @@ class Command(BaseCommand):
                                 project = None
 
                             try:
-                                hidden_tmp = "('%s', %d, %d, %d, %d, %d, %d)" % (
+                                hidden_tmp = "('%s', %d, %d, %s, %s, %s, %d)" % (
                                     MySQLdb.escape_string(timestamp.strftime("%Y-%m-%d %H:%M:%S")),
                                     squid.id,
                                     seq,
