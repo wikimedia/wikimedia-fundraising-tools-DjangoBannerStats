@@ -30,6 +30,10 @@ squidline = re.compile(
         (?P<xff>[\S]+) # X-Forwarded-For header
         \s
         (?P<useragent>[\S\s]+) # User-Agent header
+        \s
+        (?P<acceptlanguage>[\S\s]+) # Accept-Language header
+        \s
+        (?P<xcarrier>[\S\s]+) # X-carrier header
     """, re.VERBOSE
 )
 
