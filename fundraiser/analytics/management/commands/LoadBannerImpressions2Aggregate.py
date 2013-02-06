@@ -78,8 +78,8 @@ class Command(BaseCommand):
 
             files = []
             if self.recent:
-                now = "bannerImpressions-sampled100-%s*" % datetime.now().strftime("%Y%m%d-%H")
-                pasthour = "bannerImpressions-sampled100-%s*" % (datetime.now() - timedelta(hours=1)).strftime("%Y%m%d-%H")
+                now = "bannerImpressions-sampled100.tab-%s*" % datetime.now().strftime("%Y%m%d-%H")
+                pasthour = "bannerImpressions-sampled100.tab-%s*" % (datetime.now() - timedelta(hours=1)).strftime("%Y%m%d-%H")
 
                 files.extend(glob.glob(os.path.join(UDP_LOG_PATH, now)))
                 files.extend(glob.glob(os.path.join(UDP_LOG_PATH, pasthour)))
