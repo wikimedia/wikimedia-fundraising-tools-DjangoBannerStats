@@ -21,8 +21,9 @@ class SquidLog(models.Model):
         regex = re.compile(
             r"""
                 (bannerImpressions|landingpages)
+                (-sampled[0-9]+)?
+                (\.tab)?
                 -
-                (sampled[0-9]+-)?
                 (?P<timestamp>[0-9-AMP]+)
                 .log.gz
             """,
