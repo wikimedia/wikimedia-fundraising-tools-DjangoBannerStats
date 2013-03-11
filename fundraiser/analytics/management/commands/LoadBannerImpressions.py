@@ -463,11 +463,11 @@ class Command(BaseCommand):
 
             self.logger.exception("UNHANDLED EXCEPTION")
 
-            if self.debug:
-                self.logger.info(self.impression_sql % ', '.join(impressions))
 
-                for r in self.debug_info:
-                    self.logger.info("\t%s" % r)
+            self.logger.info(self.impression_sql % ', '.join(impressions))
+
+            for r in self.debug_info:
+                self.logger.info("\t%s" % r)
 
             if i_len == 1:
                 return
@@ -510,11 +510,10 @@ class Command(BaseCommand):
 
             self.logger.exception("UNHANDLED EXCEPTION")
 
-            if self.debug:
-                self.logger.info(self.impression_sql % ', '.join(impressions))
+            self.logger.info(self.impression_sql % ', '.join(impressions))
 
-                for r in self.debug_info:
-                    self.logger.info("\t%s" % r)
+            for r in self.debug_info:
+                self.logger.info("\t%s" % r)
 
             if i_len == 1:
                 return
