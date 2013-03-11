@@ -242,13 +242,13 @@ class Command(BaseCommand):
                         utm_key = ""
 
                         if "utm_source" in qs:
-                            utm_source = qs["utm_source"][0]
+                            utm_source = qs["utm_source"][0].replace("%", "%%")
                         if "utm_campaign" in qs:
-                            utm_campaign = qs["utm_campaign"][0]
+                            utm_campaign = qs["utm_campaign"][0].replace("%", "%%")
                         if "utm_medium" in qs:
-                            utm_medium = qs["utm_medium"][0]
+                            utm_medium = qs["utm_medium"][0].replace("%", "%%")
                         if "utm_key" in qs:
-                            utm_key = qs["utm_key"][0]
+                            utm_key = qs["utm_key"][0].replace("%", "%%")
 
                         landingpage = ""
                         language = None

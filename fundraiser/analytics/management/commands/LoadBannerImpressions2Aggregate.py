@@ -240,10 +240,10 @@ class Command(BaseCommand):
 
                         banner = ""
                         if "banner" in qs:
-                            banner = qs["banner"][0]
+                            banner = qs["banner"][0].replace("%", "%%")
                         campaign = ""
                         if "campaign" in qs:
-                            campaign = qs["campaign"][0]
+                            campaign = qs["campaign"][0].replace("%", "%%")
                         project = None
                         if "db" in qs:
                             project = lookup_project(qs["db"][0])
