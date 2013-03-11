@@ -142,5 +142,4 @@ class Command(BaseCommand):
 
         except Exception as e:
             transaction.rollback('default')
-            print self.update_sql % ', '.join(map(str, ids))
             raise e
