@@ -117,8 +117,8 @@ class Command(BaseCommand):
 
                 k = "'%s', '%s', '%s', %d, %d, %d" % (
                     roundtime(i[1], 1, False).strftime("%Y-%m-%d %H:%M:%S"),
-                    i[2],
-                    i[3],
+                    i[2].replace("%", "%%"),
+                    i[3].replace("%", "%%"),
                     proj_id,
                     lang_id,
                     i[6],
