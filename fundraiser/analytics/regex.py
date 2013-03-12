@@ -213,9 +213,6 @@ sampled = re.compile(
         bannerImpressions-
         sampled
         (?P<samplerate>[0-9]+)
-        -
-        ([0-9-AMP]+)
-        .log.gz
     """,
     re.VERBOSE | re.IGNORECASE
 )
