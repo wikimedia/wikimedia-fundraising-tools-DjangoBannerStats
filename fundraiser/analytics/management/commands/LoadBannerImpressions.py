@@ -274,6 +274,7 @@ class Command(BaseCommand):
 
                         country = qs["country"][0] if "country" in qs else "XX"
                         language = qs["userlang"][0] if "userlang" in qs else "en"
+                        language = qs["uselang"][0] if "uselang" in qs else language
 
                         if country in self.counts["countries"]:
                             self.counts["countries"][country] += 1
