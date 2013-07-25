@@ -134,7 +134,10 @@ class Command(BaseCommand):
                     "%s, %d" % (k, c), c
                     ))
 
-            cursor.execute(self.update_sql % ', '.join(map(str, ids)))
+            try:
+                cursor.execute(self.update_sql % ', '.join(map(str, ids)))
+            except MySQLdb.Warning as e:
+                self.logger.warning("MySQL Warning: %s" % e.message)
 
             transaction.commit('default')
 
