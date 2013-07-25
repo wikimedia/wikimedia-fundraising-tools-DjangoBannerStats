@@ -143,6 +143,9 @@ class Command(BaseCommand):
 
             return num
 
+        except (MySQLdb.Warning, _mysql_exceptions.Warning) as e:
+            self.logger.warning("MySQL Warning: %s" % e.message)
+
         except Exception as e:
             transaction.rollback('default')
             raise e
