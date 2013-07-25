@@ -4,6 +4,7 @@ from django.db import connections, transaction
 from datetime import datetime
 import logging
 import MySQLdb
+import _mysql_exceptions
 from optparse import make_option
 
 from fundraiser.analytics.functions import *
@@ -136,7 +137,7 @@ class Command(BaseCommand):
 
             try:
                 cursor.execute(self.update_sql % ', '.join(map(str, ids)))
-            except MySQLdb.Warning as e:
+            except (MySQLdb.Warning, _mysql_exceptions.Warning) as e:
                 self.logger.warning("MySQL Warning: %s" % e.message)
 
             transaction.commit('default')
