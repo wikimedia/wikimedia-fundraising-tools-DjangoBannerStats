@@ -137,10 +137,9 @@ class Command(BaseCommand):
 
             try:
                 cursor.execute(self.update_sql % ', '.join(map(str, ids)))
+                transaction.commit('default')
             except (MySQLdb.Warning, _mysql_exceptions.Warning) as e:
                 self.logger.warning("MySQL Warning: %s" % e.message)
-
-            transaction.commit('default')
 
             return num
 
