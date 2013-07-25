@@ -135,9 +135,9 @@ class Command(BaseCommand):
                     cursor.execute(self.insert_sql % (
                         "%s, %d" % (k, c), c
                         ))
-                    
+
                 except (MySQLdb.Warning, _mysql_exceptions.Warning) as e:
-                    self.logger.warning("MySQL Warning: %s" % e.message)
+                    pass # We don't care about the message
 
             cursor.execute(self.update_sql % ', '.join(map(str, ids)))
 
