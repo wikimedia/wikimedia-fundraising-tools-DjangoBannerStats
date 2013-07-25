@@ -84,8 +84,8 @@ class Command(BaseCommand):
 
             files = []
             if self.recent:
-                now = "landingpages.tab-%s*" % datetime.now().strftime("%Y%m%d-%H")
-                pasthour = "landingpages.tab-%s*" % (datetime.now() - timedelta(hours=1)).strftime("%Y%m%d-%H")
+                now = "landingpages.tsv-%s*" % datetime.now().strftime("%Y%m%d-%H")
+                pasthour = "landingpages.tsv-%s*" % (datetime.now() - timedelta(hours=1)).strftime("%Y%m%d-%H")
 
                 files.extend(glob.glob(os.path.join(UDP_LOG_PATH, now)))
                 files.extend(glob.glob(os.path.join(UDP_LOG_PATH, pasthour)))

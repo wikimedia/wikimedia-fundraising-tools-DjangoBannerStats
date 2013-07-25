@@ -22,7 +22,7 @@ class SquidLog(models.Model):
             r"""
                 (bannerImpressions|landingpages)
                 (-sampled[0-9]+)?
-                (\.tab)?
+                (\.tab|\.tsv)?
                 -
                 (?P<timestamp>[0-9-AMP]+)
                 .log.gz
