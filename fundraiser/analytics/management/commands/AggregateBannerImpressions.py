@@ -131,20 +131,19 @@ class Command(BaseCommand):
                 ids.append(i[0])
 
             for k, c in counts.iteritems():
-                cursor.execute(self.insert_sql % (
-                    "%s, %d" % (k, c), c
-                    ))
+                try:
+                    cursor.execute(self.insert_sql % (
+                        "%s, %d" % (k, c), c
+                        ))
+                    
+                except (MySQLdb.Warning, _mysql_exceptions.Warning) as e:
+                    self.logger.warning("MySQL Warning: %s" % e.message)
 
-            try:
-                cursor.execute(self.update_sql % ', '.join(map(str, ids)))
-                transaction.commit('default')
-            except (MySQLdb.Warning, _mysql_exceptions.Warning) as e:
-                self.logger.warning("MySQL Warning: %s" % e.message)
+            cursor.execute(self.update_sql % ', '.join(map(str, ids)))
+
+            transaction.commit('default')
 
             return num
-
-        except (MySQLdb.Warning, _mysql_exceptions.Warning) as e:
-            self.logger.warning("MySQL Warning: %s" % e.message)
 
         except Exception as e:
             transaction.rollback('default')
