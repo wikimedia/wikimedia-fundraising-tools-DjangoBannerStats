@@ -352,10 +352,14 @@ class Command(BaseCommand):
 
         try:
             for k,c in impressions.iteritems():
-                cursor.execute(insert_sql % (
-                    "%s, %d" % (k, c), c
-                    ))
+                try:
+                    cursor.execute(insert_sql % (
+                        "%s, %d" % (k, c), c
+                        ))
+                except (MySQLdb.Warning, _mysql_exceptions.Warning) as e:
+                    pass # We don't care about the message
                 transaction.commit('default')
+
 
         except Exception as e:
             import sys
