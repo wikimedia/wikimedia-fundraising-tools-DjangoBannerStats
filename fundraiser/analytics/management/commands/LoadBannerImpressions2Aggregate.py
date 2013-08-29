@@ -276,6 +276,8 @@ class Command(BaseCommand):
                                 # we really don't care about these, so there is no need to log them as errors
                                 results["impression"]["ignored"] += 1
                                 continue
+                            if "result" in qs and qs["result"][0] == "hide":
+                                continue
                             results["impression"]["error"] += 1
                             if self.verbose:
                                 self.logger.exception("** INVALID BANNER IMPRESSION - NOT ENOUGH DATA TO RECORD **")
