@@ -113,11 +113,15 @@ class Command(BaseCommand):
                     self.nomatched += results["squid"]["nomatch"]
 
                     self.logger.info("DONE - %s" % f)
-                    self.logger.info("\tSQUID: %d OKAY / %d FAILED with %d IGNORED and %d 404s" % (
+                    self.logger.info("\tSQUID: %d OKAY / %d FAILED with %d IGNORED and ..." % (
                         int(results["squid"]["match"]),
                         int(results["squid"]["nomatch"]),
-                        int(results["squid"]["ignored"]),
-                        int(results["squid"]["404"])
+                        int(results["squid"]["ignored"])
+                        ))
+                    for code in results['squid']['codes']:
+                        self.logger.info("\t\tIGNORED CACHE RESPONSE CODE %d: %d" % (
+                            int(code),
+                            results['squid']['codes'][code]
                         ))
                     self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d HIDDEN / %d IGNORED / %d ERROR" % (
                         results["impression"]["match"],
@@ -155,7 +159,10 @@ class Command(BaseCommand):
                 "match" : 0,
                 "nomatch" : 0,
                 "ignored" : 0,
-                "404" : 0,
+                "codes": {
+                    302: 0,
+                    404: 0,
+                }
             },
             "impression" : {
                 "match" : 0,
@@ -230,10 +237,12 @@ class Command(BaseCommand):
                             results["details"]["impression"]["ignored"]["BannerRandom"] += 1
                             continue
 
-                        # Ignore 404s
-                        if m.group("squidstatus")[-3:] == "404":
-                            results["squid"]["404"] += 1
-                            continue
+                        # Ignore everything but status 200
+                        squidstatus = m.group("squidstatus")[-3:]
+                        if squidstatus != 200:
+                            if squidstatus not in results['squid']['codes']:
+                                results['squid']['codes'][resultstatus] = 0
+                            results['squid']['codes'][resultstatus] += 1
 
                         # Also ignore anything coming from ALuminium or Grosley
                         if m.group("client") == "208.80.154.6" or m.group("client") == "208.80.152.164":
