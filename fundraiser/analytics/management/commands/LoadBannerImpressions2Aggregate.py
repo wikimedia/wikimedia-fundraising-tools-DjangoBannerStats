@@ -135,7 +135,7 @@ class Command(BaseCommand):
                     for reason in results['impression']['ignore_because']:
                         self.logger.info("\t\tIGNORED IMPRESSION BECAUSE %s: %d" % (
                             reason,
-                            results['impression']['ignore_because']['reason']
+                            results['impression']['ignore_because'][reason]
                         ))
 
             endtime = datetime.now()
