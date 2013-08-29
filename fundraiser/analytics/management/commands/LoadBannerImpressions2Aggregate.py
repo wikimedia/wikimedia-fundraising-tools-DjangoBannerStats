@@ -210,8 +210,8 @@ class Command(BaseCommand):
                         squidstatus = m.group("squidstatus")[-3:]
                         if squidstatus != 200:
                             if squidstatus not in results['squid']['codes']:
-                                results['squid']['codes'][resultstatus] = 0
-                            results['squid']['codes'][resultstatus] += 1
+                                results['squid']['codes'][squidstatus] = 0
+                            results['squid']['codes'][squidstatus] += 1
 
                         if self.recent:
                             # yeah, ignore this too

@@ -241,8 +241,8 @@ class Command(BaseCommand):
                         squidstatus = m.group("squidstatus")[-3:]
                         if squidstatus != 200:
                             if squidstatus not in results['squid']['codes']:
-                                results['squid']['codes'][resultstatus] = 0
-                            results['squid']['codes'][resultstatus] += 1
+                                results['squid']['codes'][squidstatus] = 0
+                            results['squid']['codes'][squidstatus] += 1
 
                         # Also ignore anything coming from ALuminium or Grosley
                         if m.group("client") == "208.80.154.6" or m.group("client") == "208.80.152.164":
