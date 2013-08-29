@@ -10,6 +10,7 @@ import glob
 import gzip
 import logging
 import MySQLdb
+import _mysql_exceptions
 from optparse import make_option
 import os
 import urlparse
@@ -118,7 +119,6 @@ class Command(BaseCommand):
                     self.logger.info("\tSQUID: %d OKAY / %d FAILED with %d IGNORED and ..." % (
                         int(results["squid"]["match"]),
                         int(results["squid"]["nomatch"]),
-                        int(results["squid"]["ignored"]),
                         int(results["squid"]["ignored"])
                         ))
                     for code in results['squid']['codes']:
