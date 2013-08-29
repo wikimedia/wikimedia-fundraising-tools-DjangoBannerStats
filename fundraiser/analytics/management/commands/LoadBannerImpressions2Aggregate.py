@@ -220,7 +220,7 @@ class Command(BaseCommand):
 
                         # Ignore everything but status 200
                         squidstatus = int(m.group("squidstatus")[-3:])
-                        if squidstatus < 200 or squidstatus >= 300:
+                        if squidstatus not in (200, 204, 206, 304):
                             results["squid"]["ignored"] += 1
                             if squidstatus not in results['squid']['codes']:
                                 results['squid']['codes'][squidstatus] = 0
