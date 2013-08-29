@@ -207,8 +207,9 @@ class Command(BaseCommand):
                             continue
 
                         # Ignore everything but status 200
-                        squidstatus = m.group("squidstatus")[-3:]
-                        if squidstatus != 200:
+                        squidstatus = int(m.group("squidstatus")[-3:])
+                        if squidstatus < 200 or squidstatus >= 300:
+                            results["squid"]["ignored"] += 1
                             if squidstatus not in results['squid']['codes']:
                                 results['squid']['codes'][squidstatus] = 0
                             results['squid']['codes'][squidstatus] += 1
@@ -277,6 +278,7 @@ class Command(BaseCommand):
                                 results["impression"]["ignored"] += 1
                                 continue
                             if "result" in qs and qs["result"][0] == "hide":
+                                results["impression"]["ignored"] += 1
                                 continue
                             results["impression"]["error"] += 1
                             if self.verbose:
