@@ -132,6 +132,11 @@ class Command(BaseCommand):
                         results["impression"]["ignored"],
                         results["impression"]["error"],
                         ))
+                    for reason in results['impression']['ignore_because']:
+                        self.logger.info("\t\tIGNORED IMPRESSION BECAUSE %s: %d" % (
+                            reason,
+                            results['impression']['ignore_because']['reason']
+                        ))
 
             endtime = datetime.now()
             self.logger.info("DONE")
@@ -166,7 +171,14 @@ class Command(BaseCommand):
                 "match" : 0,
                 "nomatch" : 0,
                 "ignored" : 0,
-                "error" : 0
+                "error" : 0,
+                "ignore_because": {
+                    "file": 0,
+                    "client": 0,
+                    "hidecookie": 0,
+                    "hideempty": 0,
+                    "other": 0
+                }
             }
         }
 
@@ -218,25 +230,30 @@ class Command(BaseCommand):
                             # yeah, ignore this too
                             if "Special:BannerRandom" in m.group("url"):
                                 results["impression"]["ignored"] += 1
+                                results["impression"]["ignore_because"]["file"] += 1
                                 continue
 
                             # Also ignore anything coming from Aluminium or Grosley
                             if m.group("client") == "208.80.154.6" or m.group("client") == "208.80.152.164":
                                 results["impression"]["ignored"] += 1
+                                results["impression"]["ignore_because"]["client"] += 1
                                 continue
 
                             # Also ignore anything forward for ALuminium or Grosley
                             if m.group("xff") == "208.80.154.6" or m.group("xff") == "208.80.152.164":
                                 results["impression"]["ignored"] += 1
+                                results["impression"]["ignore_because"]["client"] += 1
                                 continue
 
                             # And ignore all of our testing UA's
                             for ua in ignore_uas:
                                 if ua.match(m.group("useragent")):
                                     results["impression"]["ignored"] += 1
+                                    results["impression"]["ignore_because"]["client"] += 1
                                     continue
                             if phantomJS.search(m.group("useragent")):
                                 results["impression"]["ignored"] += 1
+                                results["impression"]["ignore_because"]["client"] += 1
                                 continue
 
                         try:
@@ -276,9 +293,16 @@ class Command(BaseCommand):
                             if "BannerController" in l:
                                 # we really don't care about these, so there is no need to log them as errors
                                 results["impression"]["ignored"] += 1
+                                results["impression"]["ignore_because"]["file"] += 1
                                 continue
                             if "result" in qs and qs["result"][0] == "hide":
                                 results["impression"]["ignored"] += 1
+                                if "reason" in qs and qs["reason"][0] == "cookie":
+                                    results["impression"]["ignore_because"]["hidecookie"] += 1
+                                elif "reason" in qs and qs["reason"][0] == "empty":
+                                    results["impression"]["ignore_because"]["hideempty"] += 1
+                                else:
+                                    results["impression"]["ignore_because"]["other"] += 1
                                 continue
                             results["impression"]["error"] += 1
                             if self.verbose:
