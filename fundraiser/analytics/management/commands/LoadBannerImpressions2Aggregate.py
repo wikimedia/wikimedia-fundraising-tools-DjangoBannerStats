@@ -78,8 +78,8 @@ class Command(BaseCommand):
 
             files = []
             if self.recent:
-                now = "bannerImpressions-sampled100.tab-%s*" % datetime.now().strftime("%Y%m%d-%H")
-                pasthour = "bannerImpressions-sampled100.tab-%s*" % (datetime.now() - timedelta(hours=1)).strftime("%Y%m%d-%H")
+                now = "bannerImpressions-sampled100.tsv-%s*" % datetime.now().strftime("%Y%m%d-%H")
+                pasthour = "bannerImpressions-sampled100.tsv-%s*" % (datetime.now() - timedelta(hours=1)).strftime("%Y%m%d-%H")
 
                 files.extend(glob.glob(os.path.join(UDP_LOG_PATH, now)))
                 files.extend(glob.glob(os.path.join(UDP_LOG_PATH, pasthour)))
@@ -115,11 +115,16 @@ class Command(BaseCommand):
                     self.nomatched += results["squid"]["nomatch"]
 
                     self.logger.info("DONE - %s" % f)
-                    self.logger.info("\tSQUID: %d OKAY / %d FAILED with %d IGNORED and %d 404s" % (
+                    self.logger.info("\tSQUID: %d OKAY / %d FAILED with %d IGNORED and ..." % (
                         int(results["squid"]["match"]),
                         int(results["squid"]["nomatch"]),
                         int(results["squid"]["ignored"]),
-                        int(results["squid"]["404"])
+                        int(results["squid"]["ignored"])
+                        ))
+                    for code in results['squid']['codes']:
+                        self.logger.info("\t\tIGNORED CACHE RESPONSE CODE %d: %d" % (
+                            int(code),
+                            results['squid']['codes'][code]
                         ))
                     self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
                         results["impression"]["match"],
@@ -152,7 +157,10 @@ class Command(BaseCommand):
                 "match" : 0,
                 "nomatch" : 0,
                 "ignored" : 0,
-                "404" : 0,
+                "codes": {
+                    302: 0,
+                    404: 0,
+                }
             },
             "impression" : {
                 "match" : 0,
@@ -198,10 +206,12 @@ class Command(BaseCommand):
                             results["squid"]["ignored"] += 1
                             continue
 
-                        # Ignore 404s
-                        if m.group("squidstatus")[-3:] == "404":
-                            results["squid"]["404"] += 1
-                            continue
+                        # Ignore everything but status 200
+                        squidstatus = m.group("squidstatus")[-3:]
+                        if squidstatus != 200:
+                            if squidstatus not in results['squid']['codes']:
+                                results['squid']['codes'][resultstatus] = 0
+                            results['squid']['codes'][resultstatus] += 1
 
                         if self.recent:
                             # yeah, ignore this too
