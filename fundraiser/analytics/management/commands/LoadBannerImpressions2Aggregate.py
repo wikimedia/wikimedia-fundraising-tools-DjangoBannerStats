@@ -225,6 +225,7 @@ class Command(BaseCommand):
                             if squidstatus not in results['squid']['codes']:
                                 results['squid']['codes'][squidstatus] = 0
                             results['squid']['codes'][squidstatus] += 1
+                            continue
 
                         if self.recent:
                             # yeah, ignore this too
