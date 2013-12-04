@@ -6,6 +6,7 @@ from pympler import muppy
 
 import gc
 from datetime import datetime, timedelta
+from dateutil.parser import parse as dateparse
 import glob
 import gzip
 import logging
@@ -257,10 +258,7 @@ class Command(BaseCommand):
                                 results["impression"]["ignore_because"]["client"] += 1
                                 continue
 
-                        try:
-                            timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
-                        except ValueError:
-                            timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S")
+                        timestamp = dateparse(m.group("timestamp"))
                         url = urlparse.urlparse(m.group("url"))
                         qs = urlparse.parse_qs(url.query, keep_blank_values=True)
 

@@ -4,6 +4,7 @@ from django.db.utils import IntegrityError
 
 import gc
 from datetime import datetime, timedelta
+from dateutil.parser import parse as dateparse
 import glob
 import gzip
 import logging
@@ -270,13 +271,7 @@ class Command(BaseCommand):
                         squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
                         seq = int(m.group("sequence"))
 
-
-                        if re.match(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]+", m.group("timestamp")):
-                            timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
-                        elif re.match(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}", m.group("timestamp")):
-                            timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S")
-                        else:
-                            raise ValueError("Unknown timestamp format: %s" % m.group("timestamp"))
+                        timestamp = dateparse(m.group("timestamp"))
 
                         url = urlparse.urlparse(m.group("url"))
                         qs = urlparse.parse_qs(url.query, keep_blank_values=True)

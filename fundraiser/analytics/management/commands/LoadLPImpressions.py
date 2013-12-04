@@ -4,6 +4,7 @@ from django.db.utils import IntegrityError
 
 import gc
 from datetime import datetime, timedelta
+from dateutil.parser import parse as dateparse
 import glob
 import gzip
 import logging
@@ -322,7 +323,7 @@ class Command(BaseCommand):
 
                         squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
                         seq = int(m.group("sequence"))
-                        timestamp = datetime.strptime(m.group("timestamp"), "%Y-%m-%dT%H:%M:%S.%f")
+                        timestamp = dateparse(m.group("timestamp"))
 
                         # not using the models here saves a lot of wall time
                         try:
