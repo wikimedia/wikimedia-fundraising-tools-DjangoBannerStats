@@ -322,7 +322,7 @@ class Command(BaseCommand):
                         utm_source = utm_source[:255]
 
                         squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
-                        seq = int(m.group("sequence"))
+                        seq = 0  # Can't do int(m.group("sequence")) because its > 2^32 and I don't want to run an alter
                         timestamp = dateparse(m.group("timestamp"))
 
                         # not using the models here saves a lot of wall time
