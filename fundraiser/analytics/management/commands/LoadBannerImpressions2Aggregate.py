@@ -2,8 +2,6 @@ from django.core.management.base import BaseCommand
 from django.db import connections, transaction, reset_queries
 from django.db.utils import IntegrityError
 
-from pympler import muppy
-
 import gc
 from datetime import datetime, timedelta
 from dateutil.parser import parse as dateparse
@@ -359,7 +357,6 @@ class Command(BaseCommand):
         del counts, file
 
         gc.collect()
-#        muppy.print_summary()
 
         reset_queries()
 
