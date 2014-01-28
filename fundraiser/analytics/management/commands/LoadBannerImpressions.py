@@ -81,11 +81,14 @@ class Command(BaseCommand):
 
             files = []
             if recent:
-                now = "bannerImpressions-sampled100.tsv-%s*" % datetime.now().strftime("%Y%m%d-%H")
-                pasthour = "bannerImpressions-sampled100.tsv-%s*" % (datetime.now() - timedelta(hours=1)).strftime("%Y%m%d-%H")
+                time_now = datetime.now()
+                time_minus1hr = time_now - timedelta(hours=1)
 
-                files.extend(glob.glob(os.path.join(UDP_LOG_PATH, now)))
-                files.extend(glob.glob(os.path.join(UDP_LOG_PATH, pasthour)))
+                now = "bannerImpressions-sampled100.tsv-%s*" % time_now.strftime("%Y%m%d-%H")
+                pasthour = "bannerImpressions-sampled100.tsv-%s*" % time_minus1hr.strftime("%Y%m%d-%H")
+
+                files.extend(glob.glob(os.path.join(UDP_LOG_PATH, time_now.strftime("%Y"), now)))
+                files.extend(glob.glob(os.path.join(UDP_LOG_PATH, time_minus1hr.strftime("%Y"), pasthour)))
             else:
                 if os.path.isdir(filename):
                     self.logger.info("Processing directory")
