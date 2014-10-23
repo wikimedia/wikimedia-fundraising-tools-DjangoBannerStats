@@ -3,7 +3,7 @@ import re
 # Regex based on http://wikitech.wikimedia.org/view/Squid_log_format
 squidline = re.compile(
     r"""
-        (?P<squid>[\S]+) # Name of the squid server
+        ^(?P<squid>[\S]+) # Name of the squid server
         \s[-]*
         (?P<sequence>[0-9]+) # Sequence ID from the squid server
         \s
@@ -15,7 +15,7 @@ squidline = re.compile(
         \s
         (?P<squidstatus>[\S]+) # Squid request status and HTTP status code
         \s
-        (?P<reply>[0-9]+) # Reply size including HTTP headers
+        (?P<reply>[0-9|-]+) # Reply size including HTTP headers
         \s
         (?P<request>[\S]+) # Request type
         \s
@@ -27,13 +27,13 @@ squidline = re.compile(
         \s
         (?P<referrer>[\S]+) # Referer header
         \s
-        (?P<xff>[\S]+) # X-Forwarded-For header
+        (?P<xff>[\S]+)? # X-Forwarded-For header
         \s
         (?P<useragent>[\S\s]+) # User-Agent header
         \s
         (?P<acceptlanguage>[\S\s]+) # Accept-Language header
         \s
-        (?P<xcarrier>[\S\s]+) # X-carrier header
+        (?P<xcarrier>[\S\s]+)$ # X-carrier header
     """, re.VERBOSE
 )
 

@@ -175,10 +175,21 @@ class Command(BaseCommand):
                 "ignored" : 0,
                 "error" : 0,
                 "ignore_because": {
+
+                    # Coordinate with window.insertBanner() and window.hideBanner() in CentralNotice
+                    # modules/ext.centralNotice.bannerController/bannerController.js,
+                    # https://www.mediawiki.org/wiki/Extension:CentralNotice/Special:RecordImpression,
+                    # and reasons set up in this method.
+                    # Note also that "hidecookie" and "hideempty" come from the values "cookie" and
+                    # "empty" respectively.
                     "file": 0,
                     "client": 0,
                     "hidecookie": 0,
                     "hideempty": 0,
+                    "preload": 0,
+                    "alterImpressionData": 0,
+                    "close": 0,
+                    "donate": 0,
                     "other": 0
                 }
             }
@@ -297,13 +308,24 @@ class Command(BaseCommand):
                                 continue
                             if "result" in qs and qs["result"][0] == "hide":
                                 results["impression"]["ignored"] += 1
-                                if "reason" in qs and qs["reason"][0] == "cookie":
-                                    results["impression"]["ignore_because"]["hidecookie"] += 1
-                                elif "reason" in qs and qs["reason"][0] == "empty":
-                                    results["impression"]["ignore_because"]["hideempty"] += 1
-                                else:
-                                    results["impression"]["ignore_because"]["other"] += 1
+
+                                if "reason" in qs:
+
+                                    # Switch "cookie" to "hidecookie" and "empty" to "hideempty"
+                                    # for consistency with legacy reasons in the database
+                                    reason = qs["reason"][0]
+                                    if reason == "cookie":
+                                        reason = "hidecookie"
+                                    if reason == "empty":
+                                        reason = "hideempty"
+
+                                    if reason in results["impression"]["ignore_because"]:
+                                        results["impression"]["ignore_because"][reason] += 1
+                                    else:
+                                        results["impression"]["ignore_because"]["other"] += 1
+
                                 continue
+
                             results["impression"]["error"] += 1
                             if self.verbose:
                                 self.logger.exception("** INVALID BANNER IMPRESSION - NOT ENOUGH DATA TO RECORD **")
