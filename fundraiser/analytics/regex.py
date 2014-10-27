@@ -4,36 +4,36 @@ import re
 squidline = re.compile(
     r"""
         ^(?P<squid>[\S]+) # Name of the squid server
-        \s[-]*
+        \t[-]*
         (?P<sequence>[0-9]+) # Sequence ID from the squid server
-        \s
+        \t
         (?P<timestamp>[0-9-]+T[0-9:.]+) # Timestamp
-        \s
+        \t
         (?P<servicetime>[0-9.]+) # Request service time
-        \s
-        (?P<client>[\S]+) # Client IP address
-        \s
-        (?P<squidstatus>[\S]+) # Squid request status and HTTP status code
-        \s
-        (?P<reply>[0-9|-]+) # Reply size including HTTP headers
-        \s
-        (?P<request>[\S]+) # Request type
-        \s
-        (?P<url>[\S]+) # Request URL
-        \s
-        (?P<squidhierarchy>[\S]+) # Squid hierarchy status, peer IP
-        \s
-        (?P<mime>[\S]+) # MIME content type
-        \s
-        (?P<referrer>[\S]+) # Referer header
-        \s
-        (?P<xff>[\S]+)? # X-Forwarded-For header
-        \s
-        (?P<useragent>[\S\s]+) # User-Agent header
-        \s
-        (?P<acceptlanguage>[\S\s]+) # Accept-Language header
-        \s
-        (?P<xcarrier>[\S\s]+)$ # X-carrier header
+        \t
+        (?P<client>[^\t]+) # Client IP address
+        \t
+        (?P<squidstatus>[^\t]+) # Squid request status and HTTP status code
+        \t
+        (?P<reply>[0-9-]+) # Reply size including HTTP headers
+        \t
+        (?P<request>[^\t]+) # Request type
+        \t
+        (?P<url>[^\t]+) # Request URL
+        \t
+        (?P<squidhierarchy>[^\t]+) # Squid hierarchy status, peer IP
+        \t
+        (?P<mime>[^\t]+) # MIME content type
+        \t
+        (?P<referrer>[^\t]+) # Referer header
+        \t
+        (?P<xff>[^\t]+)? # X-Forwarded-For header
+        \t
+        (?P<useragent>[^\t]+) # User-Agent header
+        \t
+        (?P<acceptlanguage>[^\t]+) # Accept-Language header
+        \t
+        (?P<xcarrier>[^\t]+)$ # X-carrier header
     """, re.VERBOSE
 )
 
