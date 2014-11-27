@@ -306,25 +306,26 @@ class Command(BaseCommand):
                                 results["impression"]["ignored"] += 1
                                 results["impression"]["ignore_because"]["file"] += 1
                                 continue
-                            if "result" in qs and qs["result"][0] == "hide":
-                                results["impression"]["ignored"] += 1
 
-                                if "reason" in qs:
+                        if "result" in qs and qs["result"][0] == "hide":
+                            results["impression"]["ignored"] += 1
 
-                                    # Switch "cookie" to "hidecookie" and "empty" to "hideempty"
-                                    # for consistency with legacy reasons in the database
-                                    reason = qs["reason"][0]
-                                    if reason == "cookie":
-                                        reason = "hidecookie"
-                                    if reason == "empty":
-                                        reason = "hideempty"
+                            if "reason" in qs:
 
-                                    if reason in results["impression"]["ignore_because"]:
-                                        results["impression"]["ignore_because"][reason] += 1
-                                    else:
-                                        results["impression"]["ignore_because"]["other"] += 1
+                                # Switch "cookie" to "hidecookie" and "empty" to "hideempty"
+                                # for consistency with legacy reasons in the database
+                                reason = qs["reason"][0]
+                                if reason == "cookie":
+                                    reason = "hidecookie"
+                                if reason == "empty":
+                                    reason = "hideempty"
 
-                                continue
+                                if reason in results["impression"]["ignore_because"]:
+                                    results["impression"]["ignore_because"][reason] += 1
+                                else:
+                                    results["impression"]["ignore_because"]["other"] += 1
+
+                            continue
 
                             results["impression"]["error"] += 1
                             if self.verbose:
