@@ -59,7 +59,7 @@ class Command(BaseCommand):
 
     detail_languages = [
         "en", "fr", "it", "ja", "nl", "es", "ru", "hi",
-        "de", "pt", "sv", "no", "he", "da", "zh", "fi",
+        "de", "pt", "sv", "nb", "he", "da", "zh", "fi",
         "pl", "cs", "ar", "el", "ko", "tr", "ms", "uk"
     ]
 
