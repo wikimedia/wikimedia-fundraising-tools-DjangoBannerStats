@@ -210,7 +210,7 @@ phantomJS = re.compile(r"phantomJS", re.IGNORECASE)
 
 sampled = re.compile(
     r"""
-        bannerImpressions-
+        beaconImpressions-
         sampled
         (?P<samplerate>[0-9]+)
     """,

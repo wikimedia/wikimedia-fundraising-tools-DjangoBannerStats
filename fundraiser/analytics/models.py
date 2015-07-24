@@ -20,7 +20,7 @@ class SquidLog(models.Model):
 
         regex = re.compile(
             r"""
-                (bannerImpressions|landingpages)
+                (beaconImpressions|landingpages)
                 (-sampled[0-9]+)?
                 (\.tab|\.tsv)?
                 -
