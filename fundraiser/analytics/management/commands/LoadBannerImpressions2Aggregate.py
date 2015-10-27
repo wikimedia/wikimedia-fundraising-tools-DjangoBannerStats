@@ -14,6 +14,7 @@ from optparse import make_option
 import os
 import urlparse
 
+# TODO: import NAME instead, so usage includes the full namespace.
 from fundraiser.analytics.functions import *
 from fundraiser.analytics.models import *
 from fundraiser.analytics.regex import *
@@ -81,8 +82,8 @@ class Command(BaseCommand):
                 time_now = datetime.now()
                 time_minus1hr = time_now - timedelta(hours=1)
 
-                now = "beaconImpressions-sampled100.tsv-%s*" % time_now.strftime("%Y%m%d-%H")
-                pasthour = "beaconImpressions-sampled100.tsv-%s*" % time_minus1hr.strftime("%Y%m%d-%H")
+                now = "beaconImpressions-sampled*.tsv-%s*" % time_now.strftime("%Y%m%d-%H")
+                pasthour = "beaconImpressions-sampled*.tsv-%s*" % time_minus1hr.strftime("%Y%m%d-%H")
 
                 files.extend(glob.glob(os.path.join(UDP_LOG_PATH, time_now.strftime("%Y"), now)))
                 files.extend(glob.glob(os.path.join(UDP_LOG_PATH, time_minus1hr.strftime("%Y"), pasthour)))
