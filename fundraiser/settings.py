@@ -160,8 +160,6 @@ LOGGING = {
     }
 }
 
-UDP_LOG_PATH = "/archive/udplogs"
-
 try:
     from local_settings import *
 except ImportError:
