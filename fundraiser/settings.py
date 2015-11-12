@@ -160,6 +160,8 @@ LOGGING = {
     }
 }
 
+UDP_LOG_PATH = "/archive/banner_logs"
+
 try:
     from local_settings import *
 except ImportError:
