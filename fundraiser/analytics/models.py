@@ -33,7 +33,7 @@ class SquidLog(models.Model):
         parts = regex.match(self.filename)
 
         if not parts:
-            raise ValueError("Filename does not match existing patterns for squid logs")
+            raise ValueError("Filename does not match existing patterns for squid logs: " + self.filename)
 
         try:
             ts = datetime.datetime.strptime(parts.group("timestamp"), "%Y%m%d-%H%M%S")
