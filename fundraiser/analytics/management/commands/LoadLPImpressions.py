@@ -53,7 +53,7 @@ class Command(BaseCommand):
     )
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
-    impression_sql = "INSERT INTO `landingpageimpression_raw%s` (timestamp, squid_id, squid_sequence, utm_source, utm_campaign, utm_key, utm_medium, landingpage, project_id, language_id, country_id) VALUES %s"
+    impression_sql = "INSERT INTO `landingpageimpression_raw%s` (timestamp, squid_id, squid_sequence, utm_source, utm_campaign, utm_key, contact_id, link_id, utm_medium, landingpage, project_id, language_id, country_id) VALUES %s"
 
     pending_impressions = []
 
@@ -244,6 +244,8 @@ class Command(BaseCommand):
                         utm_campaign = ""
                         utm_medium = ""
                         utm_key = ""
+                        contact_id = ""
+                        link_id = ""
 
                         if "utm_source" in qs:
                             utm_source = qs["utm_source"][0].replace("%", "%%")
@@ -253,6 +255,10 @@ class Command(BaseCommand):
                             utm_medium = qs["utm_medium"][0].replace("%", "%%")
                         if "utm_key" in qs:
                             utm_key = qs["utm_key"][0].replace("%", "%%")
+                        if "contact_id" in qs:
+                            contact_id = qs["contact_id"][0].replace("%", "%%")
+                        if "link_id" in qs:
+                            link_id = qs["link_id"][0].replace("%", "%%")
 
                         landingpage = ""
                         language = None
@@ -323,6 +329,8 @@ class Command(BaseCommand):
                         # truncate to db max lengths
                         utm_campaign = utm_campaign[:255]
                         utm_source = utm_source[:255]
+                        contact_id = contact_id[:31]
+                        link_id = link_id[:127]
 
                         squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
                         seq = 0  # Can't do int(m.group("sequence")) because its > 2^32 and I don't want to run an alter
@@ -330,13 +338,15 @@ class Command(BaseCommand):
 
                         # not using the models here saves a lot of wall time
                         try:
-                            lp_tmp = "('%s',%s, %s, '%s', '%s', '%s', '%s', '%s', %s, %s, %s)" % (
+                            lp_tmp = "('%s',%s, %s, '%s', '%s', '%s', '%s', '%s', '%s', '%s', %s, %s, %s)" % (
                                 MySQLdb.escape_string(str(timestamp.strftime("%Y-%m-%d %H:%M:%S"))),
                                 MySQLdb.escape_string(str(squid.id)),
                                 MySQLdb.escape_string(str(seq)),
                                 MySQLdb.escape_string(utm_source),
                                 MySQLdb.escape_string(utm_campaign),
                                 MySQLdb.escape_string(utm_key),
+                                MySQLdb.escape_string(contact_id),
+                                MySQLdb.escape_string(link_id),
                                 MySQLdb.escape_string(utm_medium),
                                 MySQLdb.escape_string(landingpage),
                                 MySQLdb.escape_string(str(project.id)),
