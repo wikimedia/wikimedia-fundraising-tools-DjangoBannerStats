@@ -135,6 +135,29 @@ CREATE TABLE IF NOT EXISTS `landingpageimpressions` (
           landingpage, project_id, language_id, country_id) -- WE SHOULD OPTIMIZE THIS KEY, WHAT ORDER IS BEST?
 ) DEFAULT CHARACTER SET = utf8 ENGINE = InnoDB;
 
+CREATE TABLE IF NOT EXISTS `donatewiki_unique` (
+  id              INT(11)       UNSIGNED AUTO_INCREMENT,
+  timestamp       TIMESTAMP     DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  utm_source      VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
+  utm_campaign    VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
+  contact_id      VARCHAR(32)   CHARACTER SET utf8 DEFAULT '' NOT NULL,
+  link_id         VARCHAR(128)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY (utm_source, utm_campaign, contact_id)
+) DEFAULT CHARACTER SET = utf8 ENGINE = InnoDB;
+
+CREATE TABLE IF NOT EXISTS `donatewiki_counts` (
+  id              INT(11)       UNSIGNED AUTO_INCREMENT,
+  utm_source      VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
+  utm_campaign    VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
+  link_id         VARCHAR(128)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
+  count           MEDIUMINT(11) UNSIGNED DEFAULT 0,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY (utm_source, utm_campaign, link_id)
+) DEFAULT CHARACTER SET = utf8 ENGINE = InnoDB;
+
 CREATE TABLE IF NOT EXISTS `globalcollect_orderids` (
   orderid         BIGINT(11)       UNSIGNED NOT NULL,
 

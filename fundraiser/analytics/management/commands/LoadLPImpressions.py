@@ -54,8 +54,10 @@ class Command(BaseCommand):
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
     impression_sql = "INSERT INTO `landingpageimpression_raw%s` (timestamp, squid_id, squid_sequence, utm_source, utm_campaign, utm_key, utm_medium, landingpage, project_id, language_id, country_id) VALUES %s"
+    unique_sql = "INSERT INTO `donatewiki_unique` (timestamp, utm_source, utm_campaign, contact_id, link_id) VALUES %s"
 
     pending_impressions = []
+    pending_uniques = []
 
     debug_info = []
     debug_count = 0
@@ -244,6 +246,8 @@ class Command(BaseCommand):
                         utm_campaign = ""
                         utm_medium = ""
                         utm_key = ""
+                        contact_id = ""
+                        link_id = ""
 
                         if "utm_source" in qs:
                             utm_source = qs["utm_source"][0].replace("%", "%%")
@@ -253,6 +257,10 @@ class Command(BaseCommand):
                             utm_medium = qs["utm_medium"][0].replace("%", "%%")
                         if "utm_key" in qs:
                             utm_key = qs["utm_key"][0].replace("%", "%%")
+                        if "contact_id" in qs:
+                            contact_id = qs["contact_id"][0].replace("%", "%%")
+                        if "link_id" in qs:
+                            link_id = qs["link_id"][0].replace("%", "%%")
 
                         landingpage = ""
                         language = None
@@ -323,15 +331,18 @@ class Command(BaseCommand):
                         # truncate to db max lengths
                         utm_campaign = utm_campaign[:255]
                         utm_source = utm_source[:255]
+                        contact_id = contact_id[:31]
+                        link_id = link_id[:127]
 
                         squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
                         seq = 0  # Can't do int(m.group("sequence")) because its > 2^32 and I don't want to run an alter
                         timestamp = dateparse(m.group("timestamp"))
+                        sql_time = MySQLdb.escape_string(str(timestamp.strftime("%Y-%m-%d %H:%M:%S")))
 
                         # not using the models here saves a lot of wall time
                         try:
                             lp_tmp = "('%s',%s, %s, '%s', '%s', '%s', '%s', '%s', %s, %s, %s)" % (
-                                MySQLdb.escape_string(str(timestamp.strftime("%Y-%m-%d %H:%M:%S"))),
+                                sql_time,
                                 MySQLdb.escape_string(str(squid.id)),
                                 MySQLdb.escape_string(str(seq)),
                                 MySQLdb.escape_string(utm_source),
@@ -354,15 +365,44 @@ class Command(BaseCommand):
                         finally:
                             lp_tmp = ""
 
+                        if url.hostname == 'donate.wikimedia.org' and contact_id != '':
+                            try:
+                                uq_tmp = "('%s', '%s', '%s', '%s', '%s')" % (
+                                    sql_time,
+                                    MySQLdb.escape_string(utm_source),
+                                    MySQLdb.escape_string(utm_campaign),
+                                    MySQLdb.escape_string(contact_id),
+                                    MySQLdb.escape_string(link_id),
+                                )
+                                uq_tmp = uq_tmp.replace("%", "")
+                                self.pending_uniques.append(uq_tmp)
+
+                            except Exception:
+                                results["impression"]["error"] += 1
+                                self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING DONATEWIKI HIT **")
+                                self.logger.error("********************\n%s\n********************" % l)
+
+                            finally:
+                                uq_tmp = ""
+
                         # write the models in batch
                         if len(self.pending_impressions) % batch_size == 0:
                             try:
                                 if not self.debug:
-                                    self.write(self.pending_impressions)
+                                    self.write(self.impression_sql, self.pending_impressions)
                             except Exception:
                                 self.logger.exception("Error writing impressions to the database")
                             finally:
                                 self.pending_impressions = []
+
+                        if len(self.pending_uniques) % batch_size == 0:
+                            try:
+                                if not self.debug:
+                                    self.write(self.unique_sql, self.pending_uniques)
+                            except Exception:
+                                self.logger.exception("Error writing donatewiki uniques to the database")
+                            finally:
+                                self.pending_uniques = []
 
                 except Exception as e:
                     results["impression"]["error"] += 1
@@ -372,8 +412,10 @@ class Command(BaseCommand):
             try:
                 # write out any remaining records
                 if not self.debug:
-                    self.write(self.pending_impressions)
+                    self.write(self.impression_sql, self.pending_impressions)
+                    self.write(self.unique_sql, self.pending_uniques)
                 self.pending_impressions = []
+                self.pending_uniques = []
 
             except Exception as e:
                 self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
@@ -389,22 +431,22 @@ class Command(BaseCommand):
         return results
 
     @transaction.commit_manually
-    def write(self, impressions):
+    def write(self, base_sql, impressions):
         """
         Commits a batch of transactions. Attempts a single query per model by splitting the
         tuples of each banner impression and grouping by model.  If that fails, the function
         falls back to a single transaction per banner impression
         """
-        cursor = connections['default'].cursor()
-
         i_len = len(impressions)
 
         if not i_len:
             return
 
+        cursor = connections['default'].cursor()
+
         try:
             # attempt to create all in batches
-            cursor.execute(self.impression_sql % ', '.join(impressions))
+            cursor.execute(base_sql % ', '.join(impressions))
             transaction.commit('default')
 
         except IntegrityError as e:
@@ -415,7 +457,7 @@ class Command(BaseCommand):
                 return
 
             for i in impressions:
-                self.write([i])
+                self.write(base_sql, [i])
 
         except Exception as e:
             transaction.rollback()
@@ -432,4 +474,4 @@ class Command(BaseCommand):
                 return
 
             for i in impressions:
-                self.write([i])
+                self.write(base_sql, [i])
