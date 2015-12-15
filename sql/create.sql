@@ -98,8 +98,6 @@ CREATE TABLE IF NOT EXISTS `landingpageimpression_raw` (
   utm_campaign    VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
   utm_medium      VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
   utm_key         VARCHAR(128)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
-  contact_id      VARCHAR(32)   CHARACTER SET utf8 DEFAULT '' NOT NULL,
-  link_id         VARCHAR(128)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
   landingpage     VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
   project_id      SMALLINT(3)   UNSIGNED DEFAULT NULL,
   language_id     SMALLINT(3)   UNSIGNED DEFAULT NULL,
