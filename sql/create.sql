@@ -144,7 +144,7 @@ CREATE TABLE IF NOT EXISTS `donatewiki_unique` (
   link_id         VARCHAR(128)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
 
   PRIMARY KEY (id),
-  UNIQUE KEY (utm_source, utm_campaign, contact_id)
+  UNIQUE KEY utm_source (utm_source, contact_id)
 ) DEFAULT CHARACTER SET = utf8 ENGINE = InnoDB;
 
 CREATE TABLE IF NOT EXISTS `donatewiki_counts` (
