@@ -399,7 +399,6 @@ class Command(BaseCommand):
                             try:
                                 if not self.debug:
                                     self.write(self.unique_sql, self.pending_uniques)
-                                    self.update_donatewiki_counts()
                             except Exception:
                                 self.logger.exception("Error writing donatewiki uniques to the database")
                             finally:
@@ -415,7 +414,6 @@ class Command(BaseCommand):
                 if not self.debug:
                     self.write(self.impression_sql, self.pending_impressions)
                     self.write(self.unique_sql, self.pending_uniques)
-                    self.update_donatewiki_counts()
                 self.pending_impressions = []
                 self.pending_uniques = []
 
@@ -477,19 +475,3 @@ class Command(BaseCommand):
 
             for i in impressions:
                 self.write(base_sql, [i])
-
-    @transaction.commit_manually
-    def update_donatewiki_counts(self):
-        """
-        Keep the donatewiki_counts table up to date
-        """
-        cursor = connections['default'].cursor()
-
-        try:
-            cursor.execute('TRUNCATE donatewiki_counts')
-            cursor.execute('INSERT INTO donatewiki_counts (utm_source, utm_campaign, link_id, count) SELECT utm_source, utm_campaign, link_id, COUNT(*) FROM donatewiki_unique GROUP BY utm_source, utm_campaign, link_id ORDER BY utm_campaign, utm_source, link_id')
-            transaction.commit('default')
-
-        except Exception as e:
-            transaction.rollback()
-            self.logger.exception("UNHANDLED EXCEPTION UPDATING DONATEWIKI COUNTS")

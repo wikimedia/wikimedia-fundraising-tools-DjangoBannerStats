@@ -147,16 +147,11 @@ CREATE TABLE IF NOT EXISTS `donatewiki_unique` (
   UNIQUE KEY utm_source (utm_source, contact_id)
 ) DEFAULT CHARACTER SET = utf8 ENGINE = InnoDB;
 
-CREATE TABLE IF NOT EXISTS `donatewiki_counts` (
-  id              INT(11)       UNSIGNED AUTO_INCREMENT,
-  utm_source      VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
-  utm_campaign    VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
-  link_id         VARCHAR(128)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
-  count           MEDIUMINT(11) UNSIGNED DEFAULT 0,
-
-  PRIMARY KEY (id),
-  UNIQUE KEY (utm_source, utm_campaign, link_id)
-) DEFAULT CHARACTER SET = utf8 ENGINE = InnoDB;
+CREATE OR REPLACE VIEW `donatewiki_counts` AS (
+  SELECT utm_source, utm_campaign, link_id, COUNT(*) AS count
+  FROM donatewiki_unique
+  GROUP BY utm_source, utm_campaign, link_id
+);
 
 CREATE TABLE IF NOT EXISTS `globalcollect_orderids` (
   orderid         BIGINT(11)       UNSIGNED NOT NULL,
