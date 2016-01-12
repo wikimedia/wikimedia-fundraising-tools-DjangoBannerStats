@@ -240,6 +240,9 @@ class Command(BaseCommand):
                         # go ahead and parse the URL
                         url = urlparse.urlparse(url_uni)
                         qs = urlparse.parse_qs(url.query, keep_blank_values=True)
+                        # convert parameter names to lowercase
+                        for p in qs:
+                            qs[p.lower] = qs[p]
 
                         # grab the tracking information that should be common to any LP
                         utm_source = ""
