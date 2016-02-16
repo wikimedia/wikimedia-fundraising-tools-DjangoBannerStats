@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS `donatewiki_unique` (
   timestamp       TIMESTAMP     DEFAULT CURRENT_TIMESTAMP NOT NULL,
   utm_source      VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
   utm_campaign    VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
-  contact_id      VARCHAR(32)   CHARACTER SET utf8 DEFAULT '' NOT NULL,
+  contact_id      VARCHAR(255)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
   link_id         VARCHAR(128)  CHARACTER SET utf8 DEFAULT '' NOT NULL,
 
   PRIMARY KEY (id),
