@@ -134,6 +134,9 @@ landingpages_ignore = [
     ),
 ]
 
+# For the benefit of fr-non-tech people creating links to landing pages, please
+# keep https://www.mediawiki.org/w/index.php?title=Fundraising_tech/tools up to
+# date with any changes you make to the patterns below!
 landingpages = [
     re.compile(
         r"""
@@ -159,7 +162,7 @@ landingpages = [
     ),
     re.compile(
         r"""
-            # match all of the landing page patterns on wmfwiki
+            # match all of the landing page patterns on donatewiki
             (http|https)
             ://
             (?P<sitename>donate.wikimedia.org)/
@@ -171,6 +174,7 @@ landingpages = [
                   | L2011               # potential landing page naming scheme for 2011
                   | L2012               # potential landing page naming scheme for 2012
                   | WMF                 # eg WMFJA085
+                  | WP                  # eg WP-Video-2016
                 )
                 (?:(?!\?|&)[\S])*         # this will give us the landing page up to the next ? or &
             )
