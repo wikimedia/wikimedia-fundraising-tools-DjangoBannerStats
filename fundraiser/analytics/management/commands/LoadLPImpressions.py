@@ -54,7 +54,7 @@ class Command(BaseCommand):
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
     impression_sql = "INSERT INTO `landingpageimpression_raw%s` (timestamp, squid_id, squid_sequence, utm_source, utm_campaign, utm_key, utm_medium, landingpage, project_id, language_id, country_id) VALUES %s"
-    unique_sql = "INSERT INTO `donatewiki_unique` (timestamp, utm_source, utm_campaign, contact_id, link_id) VALUES %s"
+    unique_sql = "INSERT IGNORE INTO `donatewiki_unique` (timestamp, utm_source, utm_campaign, contact_id, link_id) VALUES %s"
 
     pending_impressions = []
     pending_uniques = []
