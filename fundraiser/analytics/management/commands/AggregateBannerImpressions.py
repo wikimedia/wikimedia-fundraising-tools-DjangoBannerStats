@@ -10,7 +10,6 @@ from optparse import make_option
 from fundraiser.analytics.functions import *
 from fundraiser.analytics.models import *
 from fundraiser.analytics.regex import *
-from fundraiser.settings import UDP_LOG_PATH
 
 class Command(BaseCommand):
 

@@ -18,7 +18,7 @@ import urlparse
 from fundraiser.analytics.functions import *
 from fundraiser.analytics.models import *
 from fundraiser.analytics.regex import *
-from fundraiser.settings import UDP_LOG_PATH
+from django.conf import settings
 
 class Command(BaseCommand):
 
@@ -85,8 +85,8 @@ class Command(BaseCommand):
                 now = "beaconImpressions-sampled*.tsv-%s*" % time_now.strftime("%Y%m%d-%H")
                 pasthour = "beaconImpressions-sampled*.tsv-%s*" % time_minus1hr.strftime("%Y%m%d-%H")
 
-                files.extend(glob.glob(os.path.join(UDP_LOG_PATH, time_now.strftime("%Y"), now)))
-                files.extend(glob.glob(os.path.join(UDP_LOG_PATH, time_minus1hr.strftime("%Y"), pasthour)))
+                files.extend(glob.glob(os.path.join(settings.UDP_LOG_PATH, time_now.strftime("%Y"), now)))
+                files.extend(glob.glob(os.path.join(settings.UDP_LOG_PATH, time_minus1hr.strftime("%Y"), pasthour)))
             else:
                 if os.path.isdir(filename):
                     self.logger.info("Processing directory")
