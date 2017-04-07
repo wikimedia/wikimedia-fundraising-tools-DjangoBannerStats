@@ -88,14 +88,19 @@ class Command(BaseCommand):
 
             files = []
             if self.recent:
+                self.logger.info("Processing recent files")
                 time_now = datetime.now()
                 time_minus1hr = time_now - timedelta(hours=1)
 
                 now = "landingpages.tsv-%s*" % time_now.strftime("%Y%m%d-%H")
                 pasthour = "landingpages.tsv-%s*" % time_minus1hr.strftime("%Y%m%d-%H")
+                now_glob = os.path.join(UDP_LOG_PATH, time_now.strftime("%Y"), now)
+                pasthour_glob = os.path.join(UDP_LOG_PATH, time_minus1hr.strftime("%Y"), pasthour)
 
-                files.extend(glob.glob(os.path.join(UDP_LOG_PATH, time_now.strftime("%Y"), now)))
-                files.extend(glob.glob(os.path.join(UDP_LOG_PATH, time_minus1hr.strftime("%Y"), pasthour)))
+                self.logger.info("Checking for files matching '{now}' or '{pasthour}'".format(now=now_glob, pasthour=pasthour_glob))
+
+                files.extend(glob.glob(now_glob))
+                files.extend(glob.glob(pasthour_glob))
             else:
                 if os.path.isdir(filename):
                     self.logger.info("Processing directory")
@@ -104,6 +109,8 @@ class Command(BaseCommand):
                 else:
                     self.logger.info("Processing files matching %s" % filename)
                     files = glob.glob(filename)
+
+            self.logger.info("Examining {num} files".format(num=len(files)))
 
             for f in files:
                 path, filename_only = f.rsplit('/', 1)
