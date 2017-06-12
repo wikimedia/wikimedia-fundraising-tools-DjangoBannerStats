@@ -190,7 +190,8 @@ landingpages = [
               | w/index.php\?title=
             )
             (
-                Special:FundraiserLandingPage
+                Special:LandingPage
+#              | Special:FundraiserLandingPage # These will now 302 redirect to Special:LandingPage
 #              | Special:FundraiserRedirector # these 302 and should result in a valid call to S:FLP
             )
         """, re.VERBOSE | re.IGNORECASE
