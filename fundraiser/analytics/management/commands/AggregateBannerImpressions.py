@@ -80,10 +80,11 @@ class Command(BaseCommand):
         print "Aggregated %d rounds of %d each in %d.%d seconds" % (rounds, batch, (endtime - starttime).seconds, (endtime - starttime).microseconds)
 
 
-    @transaction.commit_manually
     def run(self, batchSize=1000):
         if not isinstance(batchSize, int):
             raise TypeError("Invalid batch size %s" % batchSize)
+
+        transaction.set_autocommit(False)
 
         cursor = connections['default'].cursor()
 
@@ -141,9 +142,11 @@ class Command(BaseCommand):
             cursor.execute(self.update_sql % ', '.join(map(str, ids)))
 
             transaction.commit('default')
-
             return num
 
         except Exception as e:
             transaction.rollback('default')
             raise e
+
+        finally:
+            transaction.set_autocommit(True)

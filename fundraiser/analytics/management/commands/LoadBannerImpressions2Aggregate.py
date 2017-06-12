@@ -389,15 +389,15 @@ class Command(BaseCommand):
 
         return results
 
-    @transaction.commit_manually
+
     def write(self, impressions):
-
         insert_sql = "INSERT INTO bannerimpressions (timestamp, banner, campaign, project_id, language_id, country_id, count) VALUES (%s) ON DUPLICATE KEY update count=count+%d"
-
-        cursor = connections['default'].cursor()
 
         if not len(impressions):
             return
+
+        transaction.set_autocommit(False)
+        cursor = connections['default'].cursor()
 
         try:
             for k,c in impressions.iteritems():
@@ -425,3 +425,4 @@ class Command(BaseCommand):
             reset_queries()
             del impressions
             del cursor
+            transaction.set_autocommit(True)

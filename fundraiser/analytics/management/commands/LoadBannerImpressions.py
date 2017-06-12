@@ -444,19 +444,20 @@ class Command(BaseCommand):
         return results
 
 
-    @transaction.commit_manually
     def write(self, impressions):
         """
         Commits a batch of transactions. Attempts a single query per model by splitting the
         tuples of each banner impression and grouping by model.  If that fails, the function
         falls back to a single transaction per banner impression
         """
-        cursor = connections['default'].cursor()
 
         i_len = len(impressions)
 
         if not i_len:
             return
+
+        transaction.set_autocommit(False)
+        cursor = connections['default'].cursor()
 
         try:
             # attempt to create all in batches
@@ -491,48 +492,54 @@ class Command(BaseCommand):
             for i in impressions:
                 self.write([i])
 
-    @transaction.commit_manually
-    def write_hidden(self, impressions):
-        """
-        Commits a batch of transactions. Attempts a single query per model by splitting the
-        tuples of each banner impression and grouping by model.  If that fails, the function
-        falls back to a single transaction per banner impression
-        """
-        cursor = connections['default'].cursor()
+        finally:
+            transaction.set_autocommit(True)
 
-        i_len = len(impressions)
+def write_hidden(self, impressions):
+    """
+    Commits a batch of transactions. Attempts a single query per model by splitting the
+    tuples of each banner impression and grouping by model.  If that fails, the function
+    falls back to a single transaction per banner impression
+    """
+    i_len = len(impressions)
 
-        if not i_len:
+    if not i_len:
+        return
+
+    transaction.set_autocommit(False)
+    cursor = connections['default'].cursor()
+
+    try:
+        # attempt to create all in batches
+        cursor.execute(self.hidden_impression_sql % ', '.join(impressions))
+
+        transaction.commit('default')
+
+    except IntegrityError as e:
+        # some impression was not happy
+        transaction.rollback('default')
+
+        if i_len == 1:
             return
 
-        try:
-            # attempt to create all in batches
-            cursor.execute(self.hidden_impression_sql % ', '.join(impressions))
+        for i in impressions:
+            self.write([i])
 
-            transaction.commit('default')
+    except Exception as e:
+        transaction.rollback()
 
-        except IntegrityError as e:
-            # some impression was not happy
-            transaction.rollback('default')
+        self.logger.exception("UNHANDLED EXCEPTION")
 
-            if i_len == 1:
-                return
+        self.logger.info(self.impression_sql % ', '.join(impressions))
 
-            for i in impressions:
-                self.write([i])
+        for r in self.debug_info:
+            self.logger.info("\t%s" % r)
 
-        except Exception as e:
-            transaction.rollback()
+        if i_len == 1:
+            return
 
-            self.logger.exception("UNHANDLED EXCEPTION")
+        for i in impressions:
+            self.write([i])
 
-            self.logger.info(self.impression_sql % ', '.join(impressions))
-
-            for r in self.debug_info:
-                self.logger.info("\t%s" % r)
-
-            if i_len == 1:
-                return
-
-            for i in impressions:
-                self.write([i])
+    finally:
+        transaction.set_autocommit(True)

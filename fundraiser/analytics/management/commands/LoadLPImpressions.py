@@ -442,7 +442,6 @@ class Command(BaseCommand):
 
         return results
 
-    @transaction.commit_manually
     def write(self, base_sql, impressions):
         """
         Commits a batch of transactions. Attempts a single query per model by splitting the
@@ -454,6 +453,7 @@ class Command(BaseCommand):
         if not i_len:
             return
 
+        transaction.set_autocommit(False)
         cursor = connections['default'].cursor()
 
         try:
@@ -487,3 +487,6 @@ class Command(BaseCommand):
 
             for i in impressions:
                 self.write(base_sql, [i])
+
+        finally:
+            transaction.set_autocommit(True)
