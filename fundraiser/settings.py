@@ -109,7 +109,7 @@ TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
-    'fundraiser/templates'
+    'fundraiser/templates',
 )
 
 INSTALLED_APPS = (
@@ -160,7 +160,7 @@ LOGGING = {
     }
 }
 
-UDP_LOG_PATH = "/archive/banner_logs"
+UDP_LOG_PATH = "/srv/archive/banner_logs"
 
 try:
     from local_settings import *
