@@ -13,6 +13,7 @@ from fundraiser.analytics.functions import *
 from fundraiser.analytics.models import *
 from fundraiser.analytics.regex import *
 
+
 class Command(BaseCommand):
 
     logger = logging.getLogger("fundraiser.analytics.load_banners")
@@ -22,36 +23,36 @@ class Command(BaseCommand):
         # replaced by add_arguments below
         option_list = BaseCommand.option_list + (
             make_option('', '--verbose',
-                dest='verbose',
-                action='store_true',
-                default=False,
-                help='Provides more verbose output.'),
+                        dest='verbose',
+                        action='store_true',
+                        default=False,
+                        help='Provides more verbose output.'),
             make_option('', '--debug',
-                dest='debug',
-                action='store_true',
-                default=False,
-                help='Do not save. Parse only.'),
+                        dest='debug',
+                        action='store_true',
+                        default=False,
+                        help='Do not save. Parse only.'),
             make_option('', '--newest',
-                dest='newest',
-                action='store_true',
-                default=False,
-                help='Do not save. Parse only.'),
+                        dest='newest',
+                        action='store_true',
+                        default=False,
+                        help='Do not save. Parse only.'),
             make_option('', '--top',
-                dest='top',
-                action='store_true',
-                default=False,
-                help='Only separate out top languages and projects'),
+                        dest='top',
+                        action='store_true',
+                        default=False,
+                        help='Only separate out top languages and projects'),
             make_option('', '--batch',
-                dest='batch',
-                type='int',
-                default=1000,
-                help='Batch size to be used for query operations.'),
+                        dest='batch',
+                        type='int',
+                        default=1000,
+                        help='Batch size to be used for query operations.'),
             make_option('', '--rounds',
-                dest='rounds',
-                type='int',
-                default=1,
-                help='Number of rounds of the batch size to be run.'),
-            )
+                        dest='rounds',
+                        type='int',
+                        default=1,
+                        help='Number of rounds of the batch size to be run.'),
+        )
 
     help = ''
 
@@ -66,7 +67,6 @@ class Command(BaseCommand):
         "de", "pt", "sv", "nb", "he", "da", "zh", "fi",
         "pl", "cs", "ar", "el", "ko", "tr", "ms", "uk"
     ]
-
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -106,7 +106,6 @@ class Command(BaseCommand):
             default=1,
             help='Number of rounds of the batch size to be run.')
 
-
     def handle(self, *args, **options):
         starttime = datetime.now()
         self.debug = options.get('debug')
@@ -123,7 +122,6 @@ class Command(BaseCommand):
 
         print("Aggregated %d rounds of %d each in %d.%d seconds" % (rounds, batch, (endtime - starttime).seconds, (endtime - starttime).microseconds))
 
-
     def run(self, batchSize=1000):
         if not isinstance(batchSize, int):
             raise TypeError("Invalid batch size %s" % batchSize)
@@ -134,9 +132,9 @@ class Command(BaseCommand):
 
         try:
             if self.newest:
-                num = cursor.execute(self.select_sql %  ("DESC", batchSize))
+                num = cursor.execute(self.select_sql % ("DESC", batchSize))
             else:
-                num = cursor.execute(self.select_sql %  ("ASC", batchSize))
+                num = cursor.execute(self.select_sql % ("ASC", batchSize))
 
             if num == 0:
                 transaction.commit('default')
@@ -156,9 +154,8 @@ class Command(BaseCommand):
                         proj_id = lookup_project("other_project").id
 
                     lang = get_language(i[5])
-                    if not lang.language in self.detail_languages:
+                    if lang.language not in self.detail_languages:
                         lang_id = lookup_language("other").id
-
 
                 k = "'%s', '%s', '%s', %d, %d, %d" % (
                     roundtime(i[1], 1, False).strftime("%Y-%m-%d %H:%M:%S"),
@@ -178,10 +175,10 @@ class Command(BaseCommand):
                 try:
                     cursor.execute(self.insert_sql % (
                         "%s, %d" % (k, c), c
-                        ))
+                    ))
 
                 except (MySQLdb.Warning, _mysql_exceptions.Warning) as e:
-                    pass # We don't care about the message
+                    pass  # We don't care about the message
 
             cursor.execute(self.update_sql % ', '.join(map(str, ids)))
 

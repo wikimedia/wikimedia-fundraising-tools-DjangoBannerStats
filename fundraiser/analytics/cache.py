@@ -1,6 +1,7 @@
 import functools
 import cPickle
 
+
 def cache(func):
     stored_results = {}
 

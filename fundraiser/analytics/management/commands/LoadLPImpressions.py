@@ -19,6 +19,7 @@ from fundraiser.analytics.models import *
 from fundraiser.analytics.regex import *
 from django.conf import settings
 
+
 class Command(BaseCommand):
 
     logger = logging.getLogger("fundraiser.analytics.load_lps")
@@ -28,31 +29,31 @@ class Command(BaseCommand):
         # replaced by add_arguments below
         option_list = BaseCommand.option_list + (
             make_option('-f', '--file',
-                dest='filename',
-                default=None,
-                help='Specify the input file'),
+                        dest='filename',
+                        default=None,
+                        help='Specify the input file'),
             make_option('', '--verbose',
-                dest='verbose',
-                action='store_true',
-                default=False,
-                help='Provides more verbose output.'),
+                        dest='verbose',
+                        action='store_true',
+                        default=False,
+                        help='Provides more verbose output.'),
             make_option('', '--debug',
-                dest='debug',
-                action='store_true',
-                default=False,
-                help='Do not save the impressions. Parse only.'),
+                        dest='debug',
+                        action='store_true',
+                        default=False,
+                        help='Do not save the impressions. Parse only.'),
             make_option('', '--recent',
-                dest='recent',
-                action='store_true',
-                default=False,
-                help='Process recent logs.'),
+                        dest='recent',
+                        action='store_true',
+                        default=False,
+                        help='Process recent logs.'),
             make_option('', '--alt',
-                dest='alt',
-                action='store_true',
-                default=False,
-                help="Save to alternate tables.  Allows for reprocessing and then a table rename."
-                    "NOTE: This requires the associated SquidLog records to be removed."
-            )
+                        dest='alt',
+                        action='store_true',
+                        default=False,
+                        help="Save to alternate tables.  Allows for reprocessing and then a table rename."
+                        "NOTE: This requires the associated SquidLog records to be removed."
+                        )
         )
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
@@ -67,10 +68,9 @@ class Command(BaseCommand):
     debug_count = 0
 
     counts = {
-        "countries" : {},
-        "languages" : {},
+        "countries": {},
+        "languages": {},
     }
-
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -103,7 +103,7 @@ class Command(BaseCommand):
             action='store_true',
             default=False,
             help="Save to alternate tables.  Allows for reprocessing and then a table rename."
-                "NOTE: This requires the associated SquidLog records to be removed.")
+            "NOTE: This requires the associated SquidLog records to be removed.")
 
     def handle(self, *args, **options):
         try:
@@ -189,7 +189,6 @@ class Command(BaseCommand):
         except Exception:
             self.logger.exception("Error processing files")
 
-
     def process_file(self, filename=None):
         if filename is None:
             self.logger.error("Error loading landing page impressions - No file specified")
@@ -202,17 +201,17 @@ class Command(BaseCommand):
         self.logger.info("Processing %s" % filename)
 
         results = {
-            "squid" : {
-                "match" : 0,
-                "nomatch" : 0,
-                "ignored" : 0,
-                "404" : 0,
+            "squid": {
+                "match": 0,
+                "nomatch": 0,
+                "ignored": 0,
+                "404": 0,
             },
-            "impression" : {
-                "match" : 0,
-                "nomatch" : 0,
-                "ignored" : 0,
-                "error" : 0
+            "impression": {
+                "match": 0,
+                "nomatch": 0,
+                "ignored": 0,
+                "error": 0
             }
         }
 
@@ -232,7 +231,7 @@ class Command(BaseCommand):
                         if self.verbose:
                             if results["squid"]["nomatch"] < 100:
                                 self.logger.info("*** NO MATCH FOR LANDING PAGE IMPRESSION ***")
-                                self.logger.info("--- File: %s | Line: %d ---" % (filename, i+1))
+                                self.logger.info("--- File: %s | Line: %d ---" % (filename, i + 1))
                                 self.logger.info(l[:500])
                                 if len(l) > 500:
                                     self.logger.info("...TRUNCATED...")
@@ -261,7 +260,6 @@ class Command(BaseCommand):
                             if ua.match(m.group("useragent")):
                                 results["impression"]["ignored"] += 1
                                 continue
-
 
                         record = False
 
@@ -331,23 +329,23 @@ class Command(BaseCommand):
                         country = lookup_country(country)
 
                         if "landingpage" in record.groupdict():
-                            project = lookup_project("foundationwiki") # TODO: this should reflect the source project not the LP wiki
+                            project = lookup_project("foundationwiki")  # TODO: this should reflect the source project not the LP wiki
                             landingpage = record.group("landingpage").rsplit('/', 2)[0]
 
                         else:
-                            project = lookup_project("donatewiki") # TODO: this should reflect the source project not the LP wiki
+                            project = lookup_project("donatewiki")  # TODO: this should reflect the source project not the LP wiki
 
                             flp_vars = {
-                                "template" : qs["template"][0] if "template" in qs else "default",
-                                "appeal" : qs["appeal"][0] if "appeal" in qs else "default",
-                                "appeal-template" : qs["appeal-template"][0] if "appeal-template" in qs else "default",
-                                "form-template" : qs["form-template"][0] if "form-template" in qs else "default",
-                                "form-countryspecific" : qs["form-countryspecific"][0] if "form-countryspecific" in qs else "default",
+                                "template": qs["template"][0] if "template" in qs else "default",
+                                "appeal": qs["appeal"][0] if "appeal" in qs else "default",
+                                "appeal-template": qs["appeal-template"][0] if "appeal-template" in qs else "default",
+                                "form-template": qs["form-template"][0] if "form-template" in qs else "default",
+                                "form-countryspecific": qs["form-countryspecific"][0] if "form-countryspecific" in qs else "default",
                             }
 
                             # go ahead and remove the cruft from the lp variables
-                            for k,v in flp_vars.iteritems():
-                                before,sep,after = v.rpartition('-')
+                            for k, v in flp_vars.iteritems():
+                                before, sep, after = v.rpartition('-')
                                 if after:
                                     flp_vars[k] = after
 
@@ -363,7 +361,7 @@ class Command(BaseCommand):
                             # something odd does not quite match in this request
                             results["impression"]["error"] += 1
                             self.logger.info("*** NOT ALL VARIABLES CAPTURED FOR LANDING PAGE IMPRESSION ***")
-                            self.logger.info("--- File: %s | Line: %d ---" % (filename, i+1))
+                            self.logger.info("--- File: %s | Line: %d ---" % (filename, i + 1))
                             self.logger.info(m.group("url")[:200])
                             if len(m.group("url")) > 200:
                                 self.logger.info("...TRUNCATED...")

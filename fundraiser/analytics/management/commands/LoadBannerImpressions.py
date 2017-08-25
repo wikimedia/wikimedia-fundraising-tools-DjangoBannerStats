@@ -18,6 +18,7 @@ from fundraiser.analytics.models import *
 from fundraiser.analytics.regex import *
 from django.conf import settings
 
+
 class Command(BaseCommand):
 
     logger = logging.getLogger("fundraiser.analytics.load_banners")
@@ -27,30 +28,30 @@ class Command(BaseCommand):
         # replaced by add_arguments below
         option_list = BaseCommand.option_list + (
             make_option('-f', '--file',
-                dest='filename',
-                default=None,
-                help='Specify the input file'),
+                        dest='filename',
+                        default=None,
+                        help='Specify the input file'),
             make_option('', '--verbose',
-                dest='verbose',
-                action='store_true',
-                default=False,
-                help='Provides more verbose output.'),
+                        dest='verbose',
+                        action='store_true',
+                        default=False,
+                        help='Provides more verbose output.'),
             make_option('', '--debug',
-                dest='debug',
-                action='store_true',
-                default=False,
-                help='Do not save the impressions. Parse only.'),
+                        dest='debug',
+                        action='store_true',
+                        default=False,
+                        help='Do not save the impressions. Parse only.'),
             make_option('', '--recent',
-                dest='recent',
-                action='store_true',
-                default=False,
-                help='Process recent logs.'),
+                        dest='recent',
+                        action='store_true',
+                        default=False,
+                        help='Process recent logs.'),
             make_option('', '--hidden',
-                dest='hidden',
-                action='store_true',
-                default=False,
-                help='Parse records for hidden logs.'),
-            )
+                        dest='hidden',
+                        action='store_true',
+                        default=False,
+                        help='Parse records for hidden logs.'),
+        )
 
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
@@ -65,10 +66,9 @@ class Command(BaseCommand):
     debug_count = 0
 
     counts = {
-        "countries" : {},
-        "languages" : {},
+        "countries": {},
+        "languages": {},
     }
-
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -165,7 +165,7 @@ class Command(BaseCommand):
                         int(results["squid"]["match"]),
                         int(results["squid"]["nomatch"]),
                         int(results["squid"]["ignored"])
-                        ))
+                    ))
                     for code in results['squid']['codes']:
                         self.logger.info("\t\tIGNORED CACHE RESPONSE CODE %d: %d" % (
                             int(code),
@@ -177,7 +177,7 @@ class Command(BaseCommand):
                         results["impression"]["hidden"],
                         results["impression"]["ignored"],
                         results["impression"]["error"],
-                        ))
+                    ))
 
                     if self.verbose:
                         import pprint
@@ -203,40 +203,40 @@ class Command(BaseCommand):
         self.logger.error("Processing %s" % filename)
 
         results = {
-            "squid" : {
-                "match" : 0,
-                "nomatch" : 0,
-                "ignored" : 0,
+            "squid": {
+                "match": 0,
+                "nomatch": 0,
+                "ignored": 0,
                 "codes": {
                     302: 0,
                     404: 0,
                 }
             },
-            "impression" : {
-                "match" : 0,
-                "nomatch" : 0,
-                "hidden" : 0,
-                "ignored" : 0,
-                "error" : 0,
+            "impression": {
+                "match": 0,
+                "nomatch": 0,
+                "hidden": 0,
+                "ignored": 0,
+                "error": 0,
             },
-            "details" : {
-                "squid" : {
-                    "ignored" : {
-                        "ssl" : 0,
+            "details": {
+                "squid": {
+                    "ignored": {
+                        "ssl": 0,
                     },
                 },
-                "impression" : {
-                    "ignored" : {
-                        "BannerRandom" : 0,
-                        "BannerController" : 0,
-                        "client" : 0,
-                        "xff" : 0,
-                        "useragent" : 0,
-                        "PhantomJS" : 0,
+                "impression": {
+                    "ignored": {
+                        "BannerRandom": 0,
+                        "BannerController": 0,
+                        "client": 0,
+                        "xff": 0,
+                        "useragent": 0,
+                        "PhantomJS": 0,
                     },
-                    "hidden" : {
-                        "cookie" : 0,
-                        "empty" : 0,
+                    "hidden": {
+                        "cookie": 0,
+                        "empty": 0,
                     }
                 },
             },
@@ -264,7 +264,7 @@ class Command(BaseCommand):
                         if self.verbose:
                             if results["squid"]["nomatch"] < 100:
                                 self.logger.info("*** NO MATCH FOR BANNER IMPRESSION ***")
-                                self.logger.info("--- File: %s | Line: %d ---" % (filename, i+1))
+                                self.logger.info("--- File: %s | Line: %d ---" % (filename, i + 1))
                                 self.logger.info(l[:500])
                                 if len(l) > 500:
                                     self.logger.info("...TRUNCATED...")
@@ -352,9 +352,9 @@ class Command(BaseCommand):
 
                         if "result" in qs and qs["result"][0] == "hide":
                             if not self.hidden:
-                                continue # keep calm and continue on
+                                continue  # keep calm and continue on
 
-                            if not "reason" in qs:
+                            if "reason" not in qs:
                                 results["impression"]["error"] += 1
                                 self.logger.exception("** INVALID HIDDEN BANNER IMPRESSION - NOT ENOUGH DATA TO RECORD **")
                                 self.logger.error("********************\n%s\n********************" % l.strip())
@@ -363,18 +363,18 @@ class Command(BaseCommand):
 
                             results["impression"]["hidden"] += 1
 
-                            if not reason in results["details"]["impression"]["hidden"]:
+                            if reason not in results["details"]["impression"]["hidden"]:
                                 results["details"]["impression"]["hidden"][reason] = 0
                             results["details"]["impression"]["hidden"][reason] += 1
 
                             if reason == "empty":
-                                continue # no need to save empties in the database -- we would explode
+                                continue  # no need to save empties in the database -- we would explode
 
-                            if not "country" in qs:
+                            if "country" not in qs:
                                 country = None
-                            if not "language" in qs:
+                            if "language" not in qs:
                                 language = None
-                            if not "db" in qs:
+                            if "db" not in qs:
                                 project = None
 
                             try:
@@ -382,9 +382,9 @@ class Command(BaseCommand):
                                     MySQLdb.escape_string(timestamp.strftime("%Y-%m-%d %H:%M:%S")),
                                     squid.id,
                                     seq,
-                                    project.id if not project is None else project,
-                                    language.id if not language is None else language,
-                                    country.id if not country is None else country,
+                                    project.id if project is not None else project,
+                                    language.id if language is not None else language,
+                                    country.id if country is not None else country,
                                     sample_rate
                                 )
                                 self.pending_hidden.append(hidden_tmp)
@@ -430,7 +430,7 @@ class Command(BaseCommand):
                                     language.id,
                                     country.id,
                                     sample_rate
-                                    )
+                                )
                                 self.pending_impressions.append(banner_tmp)
                                 results["impression"]["match"] += 1
 
@@ -479,7 +479,6 @@ class Command(BaseCommand):
 
         return results
 
-
     def write(self, impressions):
         """
         Commits a batch of transactions. Attempts a single query per model by splitting the
@@ -516,7 +515,6 @@ class Command(BaseCommand):
 
             self.logger.exception("UNHANDLED EXCEPTION")
 
-
             self.logger.info(self.impression_sql % ', '.join(impressions))
 
             for r in self.debug_info:
@@ -530,6 +528,7 @@ class Command(BaseCommand):
 
         finally:
             transaction.set_autocommit(True)
+
 
 def write_hidden(self, impressions):
     """

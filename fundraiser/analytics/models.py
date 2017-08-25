@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class SquidLog(models.Model):
     ""
     id = models.IntegerField(primary_key=True)
@@ -42,6 +43,7 @@ class SquidLog(models.Model):
             ts = datetime.datetime.strptime(parts.group("timestamp"), "%Y-%m-%d-%I%p--%M")
         return ts
 
+
 class SquidHost(models.Model):
     "Lookup table for squid hostnames"
     id = models.IntegerField(primary_key=True)
@@ -53,6 +55,7 @@ class SquidHost(models.Model):
 
     def __unicode__(self):
         return self.hostname
+
 
 class SquidRecord(models.Model):
     ""
@@ -66,7 +69,8 @@ class SquidRecord(models.Model):
         managed = False
 
     def __unicode__(self):
-        return  "%s - %d" % (self.squid, self.sequence)
+        return "%s - %d" % (self.squid, self.sequence)
+
 
 class Project(models.Model):
     "Lookup table for project names"
@@ -79,6 +83,7 @@ class Project(models.Model):
 
     def __unicode__(self):
         return self.project
+
 
 class Language(models.Model):
     "Lookup table for languages"
@@ -93,6 +98,7 @@ class Language(models.Model):
     def __unicode__(self):
         return "%s (%s)" % (self.iso_code, self.language)
 
+
 class Country(models.Model):
     "Lookup table for countries"
     id = models.IntegerField(primary_key=True)
@@ -103,9 +109,9 @@ class Country(models.Model):
         db_table = 'country'
         managed = False
 
-
     def __unicode__(self):
         return self.iso_code
+
 
 class BannerImpression(models.Model):
     ""
@@ -121,6 +127,7 @@ class BannerImpression(models.Model):
     class Meta:
         db_table = 'bannerimpression_raw'
         managed = False
+
 
 class LandingPageImpression(models.Model):
     ""
@@ -138,6 +145,7 @@ class LandingPageImpression(models.Model):
     class Meta:
         db_table = 'landingpageimpression_raw'
         managed = False
+
 
 class LandingPageImpressions(models.Model):
     ""

@@ -20,6 +20,7 @@ from fundraiser.analytics.models import *
 from fundraiser.analytics.regex import *
 from django.conf import settings
 
+
 class Command(BaseCommand):
 
     logger = logging.getLogger("fundraiser.analytics.load_banners")
@@ -29,30 +30,30 @@ class Command(BaseCommand):
         # replaced by add_arguments below
         option_list = BaseCommand.option_list + (
             make_option('-f', '--file',
-                dest='filename',
-                default=None,
-                help='Specify the input file'),
+                        dest='filename',
+                        default=None,
+                        help='Specify the input file'),
             make_option('', '--verbose',
-                dest='verbose',
-                action='store_true',
-                default=False,
-                help='Provides more verbose output.'),
+                        dest='verbose',
+                        action='store_true',
+                        default=False,
+                        help='Provides more verbose output.'),
             make_option('', '--top',
-                dest='top',
-                action='store_true',
-                default=False,
-                help='Only separate out top languages and projects'),
+                        dest='top',
+                        action='store_true',
+                        default=False,
+                        help='Only separate out top languages and projects'),
             make_option('', '--debug',
-                dest='debug',
-                action='store_true',
-                default=False,
-                help='Do not save the impressions. Parse only.'),
+                        dest='debug',
+                        action='store_true',
+                        default=False,
+                        help='Do not save the impressions. Parse only.'),
             make_option('', '--recent',
-                dest='recent',
-                action='store_true',
-                default=False,
-                help='Process recent logs.'),
-            )
+                        dest='recent',
+                        action='store_true',
+                        default=False,
+                        help='Process recent logs.'),
+        )
 
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
@@ -64,7 +65,6 @@ class Command(BaseCommand):
         "de", "pt", "sv", "nb", "he", "da", "zh", "fi",
         "pl", "cs", "ar", "el", "ko", "tr", "ms", "uk"
     ]
-
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -98,9 +98,8 @@ class Command(BaseCommand):
             default=False,
             help='Process recent logs.')
 
-
     def handle(self, *args, **options):
-#        gc.set_debug(gc.DEBUG_LEAK)
+        #        gc.set_debug(gc.DEBUG_LEAK)
 
         try:
             starttime = datetime.now()
@@ -160,7 +159,7 @@ class Command(BaseCommand):
                         int(results["squid"]["match"]),
                         int(results["squid"]["nomatch"]),
                         int(results["squid"]["ignored"])
-                        ))
+                    ))
                     for code in results['squid']['codes']:
                         self.logger.info("\t\tIGNORED CACHE RESPONSE CODE %d: %d" % (
                             int(code),
@@ -171,7 +170,7 @@ class Command(BaseCommand):
                         results["impression"]["nomatch"],
                         results["impression"]["ignored"],
                         results["impression"]["error"],
-                        ))
+                    ))
                     for reason in results['impression']['ignore_because']:
                         self.logger.info("\t\tIGNORED IMPRESSION BECAUSE %s: %d" % (
                             reason,
@@ -198,20 +197,20 @@ class Command(BaseCommand):
         self.logger.error("Processing %s" % filename)
 
         results = {
-            "squid" : {
-                "match" : 0,
-                "nomatch" : 0,
-                "ignored" : 0,
+            "squid": {
+                "match": 0,
+                "nomatch": 0,
+                "ignored": 0,
                 "codes": {
                     302: 0,
                     404: 0,
                 }
             },
-            "impression" : {
-                "match" : 0,
-                "nomatch" : 0,
-                "ignored" : 0,
-                "error" : 0,
+            "impression": {
+                "match": 0,
+                "nomatch": 0,
+                "ignored": 0,
+                "error": 0,
                 "ignore_because": {
 
                     # Coordinate with window.insertBanner() and window.hideBanner() in CentralNotice
@@ -255,7 +254,7 @@ class Command(BaseCommand):
                         if self.verbose:
                             if results["squid"]["nomatch"] < 100:
                                 self.logger.info("*** NO MATCH FOR BANNER IMPRESSION ***")
-                                self.logger.info("--- File: %s | Line: %d ---" % (filename, i+1))
+                                self.logger.info("--- File: %s | Line: %d ---" % (filename, i + 1))
                                 self.logger.info(l[:500])
                                 if len(l) > 500:
                                     self.logger.info("...TRUNCATED...")
@@ -426,7 +425,6 @@ class Command(BaseCommand):
 
         return results
 
-
     def write(self, impressions):
         insert_sql = "INSERT INTO bannerimpressions (timestamp, banner, campaign, project_id, language_id, country_id, count) VALUES (%s) ON DUPLICATE KEY update count=count+%d"
 
@@ -437,15 +435,14 @@ class Command(BaseCommand):
         cursor = connections['default'].cursor()
 
         try:
-            for k,c in impressions.iteritems():
+            for k, c in impressions.iteritems():
                 try:
                     cursor.execute(insert_sql % (
                         "%s, %d" % (k, c), c
-                        ))
+                    ))
                 except (MySQLdb.Warning, _mysql_exceptions.Warning) as e:
-                    pass # We don't care about the message
+                    pass  # We don't care about the message
                 transaction.commit('default')
-
 
         except Exception as e:
             import sys

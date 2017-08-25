@@ -5,6 +5,7 @@ from datetime import timedelta
 from fundraiser.analytics.cache import cache
 from fundraiser.analytics.models import Country, Language, Project, SquidHost
 
+
 @cache
 def lookup_country(country=None, default="XX", create=True, verbose=False):
     """
@@ -25,7 +26,7 @@ def lookup_country(country=None, default="XX", create=True, verbose=False):
     """
     # check for bad input values and try to return a default
     if not country or country is None:
-        if not default is False:
+        if default is not False:
             if verbose:
                 print("** INVALID COUNTRY, returning default (%s)" % default)
             return lookup_country(default, False, create, verbose)
@@ -51,11 +52,12 @@ def lookup_country(country=None, default="XX", create=True, verbose=False):
             else:
                 return None
         except Warning:
-            #TODO: use the default
+            # TODO: use the default
             pass
     except Warning:
-        #TODO: use the default
+        # TODO: use the default
         pass
+
 
 @cache
 def lookup_language(language=None, default="en", create=True, verbose=False):
@@ -77,7 +79,7 @@ def lookup_language(language=None, default="en", create=True, verbose=False):
     """
     # check for bad input values and try to return a default
     if not language or language is None:
-        if not default is False:
+        if default is not False:
             if verbose:
                 print("** INVALID LANGUAGE, returning default (%s)" % default)
             return lookup_language(default, False, create, verbose)
@@ -103,11 +105,12 @@ def lookup_language(language=None, default="en", create=True, verbose=False):
             else:
                 return None
         except Warning:
-            #TODO: use the default
+            # TODO: use the default
             pass
     except Warning:
-        #TODO: use the default
+        # TODO: use the default
         pass
+
 
 @cache
 def lookup_project(project=None, default="donatewiki", create=True, verbose=False):
@@ -129,7 +132,7 @@ def lookup_project(project=None, default="donatewiki", create=True, verbose=Fals
     """
     # check for bad input values and try to return a default
     if not project or project is None:
-        if not default is False:
+        if default is not False:
             if verbose:
                 print("** INVALID PROJECT, returning default (%s)" % default)
             return lookup_project(default, False, create, verbose)
@@ -155,11 +158,12 @@ def lookup_project(project=None, default="donatewiki", create=True, verbose=Fals
             else:
                 return None
         except Warning:
-            #TODO: use the default
+            # TODO: use the default
             pass
     except Warning:
-        #TODO: use the default
+        # TODO: use the default
         pass
+
 
 @cache
 def lookup_squidhost(hostname=None, default="unknown", create=True, verbose=False):
@@ -181,7 +185,7 @@ def lookup_squidhost(hostname=None, default="unknown", create=True, verbose=Fals
     """
     # check for bad input values and try to return a default
     if not hostname or hostname is None:
-        if not default is False:
+        if default is not False:
             if verbose:
                 print("** INVALID SQUID HOSTNAME, returning default (%s)" % default)
             return lookup_squidhost(default, False, create, verbose)
@@ -207,10 +211,10 @@ def lookup_squidhost(hostname=None, default="unknown", create=True, verbose=Fals
             else:
                 return None
         except Warning:
-            #TODO: use the default
+            # TODO: use the default
             pass
     except Warning:
-        #TODO: use the default
+        # TODO: use the default
         pass
 
 
@@ -223,6 +227,7 @@ def get_project(id=None):
 
     return Project.objects.get(id=id)
 
+
 @cache
 def get_language(id=None):
     if id is None:
@@ -231,6 +236,7 @@ def get_language(id=None):
     id = int(id)
 
     return Language.objects.get(id=id)
+
 
 @cache
 def get_county(id=None):
@@ -242,12 +248,14 @@ def get_county(id=None):
     return Country.objects.get(id=id)
 
 # DO NOT CACHE
+
+
 def roundtime(time, minutes=1, midpoint=True):
     # NOTE: minutes should be less than 60
 
-    time += timedelta(minutes=-(time.minute%minutes), seconds=-time.second)
+    time += timedelta(minutes=-(time.minute % minutes), seconds=-time.second)
 
     if midpoint:
-        time += timedelta(seconds=minutes*60/2)
+        time += timedelta(seconds=minutes * 60 / 2)
 
     return time
