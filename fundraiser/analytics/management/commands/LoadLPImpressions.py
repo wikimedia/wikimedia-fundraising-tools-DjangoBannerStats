@@ -23,34 +23,37 @@ class Command(BaseCommand):
 
     logger = logging.getLogger("fundraiser.analytics.load_lps")
 
-    option_list = BaseCommand.option_list + (
-        make_option('-f', '--file',
-            dest='filename',
-            default=None,
-            help='Specify the input file'),
-        make_option('', '--verbose',
-            dest='verbose',
-            action='store_true',
-            default=False,
-            help='Provides more verbose output.'),
-        make_option('', '--debug',
-            dest='debug',
-            action='store_true',
-            default=False,
-            help='Do not save the impressions. Parse only.'),
-        make_option('', '--recent',
-            dest='recent',
-            action='store_true',
-            default=False,
-            help='Process recent logs.'),
-        make_option('', '--alt',
-            dest='alt',
-            action='store_true',
-            default=False,
-            help="Save to alternate tables.  Allows for reprocessing and then a table rename."
-                "NOTE: This requires the associated SquidLog records to be removed."
+    if hasattr(BaseCommand, 'option_list'):
+        # DEPRECATED, removed in Django 1.10
+        # replaced by add_arguments below
+        option_list = BaseCommand.option_list + (
+            make_option('-f', '--file',
+                dest='filename',
+                default=None,
+                help='Specify the input file'),
+            make_option('', '--verbose',
+                dest='verbose',
+                action='store_true',
+                default=False,
+                help='Provides more verbose output.'),
+            make_option('', '--debug',
+                dest='debug',
+                action='store_true',
+                default=False,
+                help='Do not save the impressions. Parse only.'),
+            make_option('', '--recent',
+                dest='recent',
+                action='store_true',
+                default=False,
+                help='Process recent logs.'),
+            make_option('', '--alt',
+                dest='alt',
+                action='store_true',
+                default=False,
+                help="Save to alternate tables.  Allows for reprocessing and then a table rename."
+                    "NOTE: This requires the associated SquidLog records to be removed."
+            )
         )
-    )
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
     impression_sql = "INSERT INTO `landingpageimpression_raw%s` (timestamp, squid_id, squid_sequence, utm_source, utm_campaign, utm_key, utm_medium, landingpage, project_id, language_id, country_id) VALUES %s"
@@ -67,6 +70,40 @@ class Command(BaseCommand):
         "countries" : {},
         "languages" : {},
     }
+
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '-f',
+            '--file',
+            dest='filename',
+            default=None,
+            help='Specify the input file')
+        parser.add_argument(
+            '--verbose',
+            dest='verbose',
+            action='store_true',
+            default=False,
+            help='Provides more verbose output.')
+        parser.add_argument(
+            '--debug',
+            dest='debug',
+            action='store_true',
+            default=False,
+            help='Do not save the impressions. Parse only.')
+        parser.add_argument(
+            '--recent',
+            dest='recent',
+            action='store_true',
+            default=False,
+            help='Process recent logs.')
+        parser.add_argument(
+            '--alt',
+            dest='alt',
+            action='store_true',
+            default=False,
+            help="Save to alternate tables.  Allows for reprocessing and then a table rename."
+                "NOTE: This requires the associated SquidLog records to be removed.")
 
     def handle(self, *args, **options):
         try:

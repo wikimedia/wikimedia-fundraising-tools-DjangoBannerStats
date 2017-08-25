@@ -15,38 +15,41 @@ class Command(BaseCommand):
 
     logger = logging.getLogger("fundraiser.analytics.load_banners")
 
-    option_list = BaseCommand.option_list + (
-        make_option('', '--verbose',
-            dest='verbose',
-            action='store_true',
-            default=False,
-            help='Provides more verbose output.'),
-        make_option('', '--debug',
-            dest='debug',
-            action='store_true',
-            default=False,
-            help='Do not save. Parse only.'),
-        make_option('', '--newest',
-            dest='newest',
-            action='store_true',
-            default=False,
-            help='Do not save. Parse only.'),
-        make_option('', '--top',
-            dest='top',
-            action='store_true',
-            default=False,
-            help='Only separate out top languages and projects'),
-        make_option('', '--batch',
-            dest='batch',
-            type='int',
-            default=1000,
-            help='Batch size to be used for query operations.'),
-        make_option('', '--rounds',
-            dest='rounds',
-            type='int',
-            default=1,
-            help='Number of rounds of the batch size to be run.'),
-        )
+    if hasattr(BaseCommand, 'option_list'):
+        # DEPRECATED, removed in Django 1.10
+        # replaced by add_arguments below
+        option_list = BaseCommand.option_list + (
+            make_option('', '--verbose',
+                dest='verbose',
+                action='store_true',
+                default=False,
+                help='Provides more verbose output.'),
+            make_option('', '--debug',
+                dest='debug',
+                action='store_true',
+                default=False,
+                help='Do not save. Parse only.'),
+            make_option('', '--newest',
+                dest='newest',
+                action='store_true',
+                default=False,
+                help='Do not save. Parse only.'),
+            make_option('', '--top',
+                dest='top',
+                action='store_true',
+                default=False,
+                help='Only separate out top languages and projects'),
+            make_option('', '--batch',
+                dest='batch',
+                type='int',
+                default=1000,
+                help='Batch size to be used for query operations.'),
+            make_option('', '--rounds',
+                dest='rounds',
+                type='int',
+                default=1,
+                help='Number of rounds of the batch size to be run.'),
+            )
 
     help = ''
 
@@ -61,6 +64,45 @@ class Command(BaseCommand):
         "de", "pt", "sv", "nb", "he", "da", "zh", "fi",
         "pl", "cs", "ar", "el", "ko", "tr", "ms", "uk"
     ]
+
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--verbose',
+            dest='verbose',
+            action='store_true',
+            default=False,
+            help='Provides more verbose output.')
+        parser.add_argument(
+            '--debug',
+            dest='debug',
+            action='store_true',
+            default=False,
+            help='Do not save. Parse only.')
+        parser.add_argument(
+            '--newest',
+            dest='newest',
+            action='store_true',
+            default=False,
+            help='Do not save. Parse only.')
+        parser.add_argument(
+            '--top',
+            dest='top',
+            action='store_true',
+            default=False,
+            help='Only separate out top languages and projects')
+        parser.add_argument(
+            '--batch',
+            dest='batch',
+            type='int',
+            default=1000,
+            help='Batch size to be used for query operations.')
+        parser.add_argument(
+            '--rounds',
+            dest='rounds',
+            type='int',
+            default=1,
+            help='Number of rounds of the batch size to be run.')
 
 
     def handle(self, *args, **options):

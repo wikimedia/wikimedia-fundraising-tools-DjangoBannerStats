@@ -24,32 +24,35 @@ class Command(BaseCommand):
 
     logger = logging.getLogger("fundraiser.analytics.load_banners")
 
-    option_list = BaseCommand.option_list + (
-        make_option('-f', '--file',
-            dest='filename',
-            default=None,
-            help='Specify the input file'),
-        make_option('', '--verbose',
-            dest='verbose',
-            action='store_true',
-            default=False,
-            help='Provides more verbose output.'),
-        make_option('', '--top',
-            dest='top',
-            action='store_true',
-            default=False,
-            help='Only separate out top languages and projects'),
-        make_option('', '--debug',
-            dest='debug',
-            action='store_true',
-            default=False,
-            help='Do not save the impressions. Parse only.'),
-        make_option('', '--recent',
-            dest='recent',
-            action='store_true',
-            default=False,
-            help='Process recent logs.'),
-        )
+    if hasattr(BaseCommand, 'option_list'):
+        # DEPRECATED, removed in Django 1.10
+        # replaced by add_arguments below
+        option_list = BaseCommand.option_list + (
+            make_option('-f', '--file',
+                dest='filename',
+                default=None,
+                help='Specify the input file'),
+            make_option('', '--verbose',
+                dest='verbose',
+                action='store_true',
+                default=False,
+                help='Provides more verbose output.'),
+            make_option('', '--top',
+                dest='top',
+                action='store_true',
+                default=False,
+                help='Only separate out top languages and projects'),
+            make_option('', '--debug',
+                dest='debug',
+                action='store_true',
+                default=False,
+                help='Do not save the impressions. Parse only.'),
+            make_option('', '--recent',
+                dest='recent',
+                action='store_true',
+                default=False,
+                help='Process recent logs.'),
+            )
 
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
@@ -61,6 +64,40 @@ class Command(BaseCommand):
         "de", "pt", "sv", "nb", "he", "da", "zh", "fi",
         "pl", "cs", "ar", "el", "ko", "tr", "ms", "uk"
     ]
+
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '-f',
+            '--file',
+            dest='filename',
+            default=None,
+            help='Specify the input file')
+        parser.add_argument(
+            '--verbose',
+            dest='verbose',
+            action='store_true',
+            default=False,
+            help='Provides more verbose output.')
+        parser.add_argument(
+            '--top',
+            dest='top',
+            action='store_true',
+            default=False,
+            help='Only separate out top languages and projects')
+        parser.add_argument(
+            '--debug',
+            dest='debug',
+            action='store_true',
+            default=False,
+            help='Do not save the impressions. Parse only.')
+        parser.add_argument(
+            '--recent',
+            dest='recent',
+            action='store_true',
+            default=False,
+            help='Process recent logs.')
+
 
     def handle(self, *args, **options):
 #        gc.set_debug(gc.DEBUG_LEAK)
