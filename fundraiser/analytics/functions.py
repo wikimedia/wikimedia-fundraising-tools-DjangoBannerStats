@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from datetime import timedelta
 
 from fundraiser.analytics.cache import cache
@@ -25,13 +27,13 @@ def lookup_country(country=None, default="XX", create=True, verbose=False):
     if not country or country is None:
         if not default is False:
             if verbose:
-                print "** INVALID COUNTRY, returning default (%s)" % default
+                print("** INVALID COUNTRY, returning default (%s)" % default)
             return lookup_country(default, False, create, verbose)
         else:
             return None
     if len(country) > 2:
         if verbose:
-            print "** INVALID COUNTRY ISO_CODE %s --- USING DEFAULT" % country
+            print("** INVALID COUNTRY ISO_CODE %s --- USING DEFAULT" % country)
         country = default
     try:
         country = Country.objects.get(iso_code=country)
@@ -44,7 +46,7 @@ def lookup_country(country=None, default="XX", create=True, verbose=False):
                 Country.objects.create(iso_code=country)
                 country = Country.objects.get(iso_code=country)
                 if verbose and country:
-                    print "** CREATED COUNTRY FOR: %s (id:%d)" % (country.iso_code, country.id)
+                    print("** CREATED COUNTRY FOR: %s (id:%d)" % (country.iso_code, country.id))
                 return country
             else:
                 return None
@@ -77,13 +79,13 @@ def lookup_language(language=None, default="en", create=True, verbose=False):
     if not language or language is None:
         if not default is False:
             if verbose:
-                print "** INVALID LANGUAGE, returning default (%s)" % default
+                print("** INVALID LANGUAGE, returning default (%s)" % default)
             return lookup_language(default, False, create, verbose)
         else:
             return None
     if len(language) > 24:
         if verbose:
-            print "** TRUNCATING LANGUAGE ISO_CODE %s to %s" % (language, language[:24])
+            print("** TRUNCATING LANGUAGE ISO_CODE %s to %s" % (language, language[:24]))
         language = language[:24]
     try:
         language = Language.objects.get(iso_code=language)
@@ -96,7 +98,7 @@ def lookup_language(language=None, default="en", create=True, verbose=False):
                 Language.objects.create(iso_code=language)
                 language = Language.objects.get(iso_code=language)
                 if verbose and language:
-                    print "** CREATED LANGUAGE FOR: %s (id:%d)" % (language.iso_code, language.id)
+                    print("** CREATED LANGUAGE FOR: %s (id:%d)" % (language.iso_code, language.id))
                 return language
             else:
                 return None
@@ -129,13 +131,13 @@ def lookup_project(project=None, default="donatewiki", create=True, verbose=Fals
     if not project or project is None:
         if not default is False:
             if verbose:
-                print "** INVALID PROJECT, returning default (%s)" % default
+                print("** INVALID PROJECT, returning default (%s)" % default)
             return lookup_project(default, False, create, verbose)
         else:
             return None
     if len(project) > 128:
         if verbose:
-            print "** TRUNCATING PROJECT %s to %s" % (project, project[:128])
+            print("** TRUNCATING PROJECT %s to %s" % (project, project[:128]))
         project = project[:128]
     try:
         project = Project.objects.get(project=project)
@@ -148,7 +150,7 @@ def lookup_project(project=None, default="donatewiki", create=True, verbose=Fals
                 Project.objects.create(project=project)
                 project = Project.objects.get(project=project)
                 if verbose and project:
-                    print "** CREATED PROJECT FOR: %s (id:%d)" % (project.project, project.id)
+                    print("** CREATED PROJECT FOR: %s (id:%d)" % (project.project, project.id))
                 return project
             else:
                 return None
@@ -181,13 +183,13 @@ def lookup_squidhost(hostname=None, default="unknown", create=True, verbose=Fals
     if not hostname or hostname is None:
         if not default is False:
             if verbose:
-                print "** INVALID SQUID HOSTNAME, returning default (%s)" % default
+                print("** INVALID SQUID HOSTNAME, returning default (%s)" % default)
             return lookup_squidhost(default, False, create, verbose)
         else:
             return None
     if len(hostname) > 128:
         if verbose:
-            print "** TRUNCATING SQUID HOSTNAME %s to %s" % (hostname, hostname[:128])
+            print("** TRUNCATING SQUID HOSTNAME %s to %s" % (hostname, hostname[:128]))
         hostname = hostname[:128]
     try:
         squid = SquidHost.objects.get(hostname=hostname)
@@ -200,7 +202,7 @@ def lookup_squidhost(hostname=None, default="unknown", create=True, verbose=Fals
                 SquidHost.objects.create(hostname=hostname)
                 squid = SquidHost.objects.get(hostname=hostname)
                 if verbose and squid:
-                    print "** CREATED SQUID HOST FOR: %s (id:%d)" % (squid.hostname, squid.id)
+                    print("** CREATED SQUID HOST FOR: %s (id:%d)" % (squid.hostname, squid.id))
                 return squid
             else:
                 return None

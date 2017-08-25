@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from django.core.management.base import BaseCommand
 from django.db import connections, transaction
 
@@ -119,7 +121,7 @@ class Command(BaseCommand):
 
         endtime = datetime.now()
 
-        print "Aggregated %d rounds of %d each in %d.%d seconds" % (rounds, batch, (endtime - starttime).seconds, (endtime - starttime).microseconds)
+        print("Aggregated %d rounds of %d each in %d.%d seconds" % (rounds, batch, (endtime - starttime).seconds, (endtime - starttime).microseconds))
 
 
     def run(self, batchSize=1000):
