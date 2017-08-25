@@ -9,9 +9,7 @@ import MySQLdb
 import _mysql_exceptions
 from optparse import make_option
 
-from fundraiser.analytics.functions import *
-from fundraiser.analytics.models import *
-from fundraiser.analytics.regex import *
+from fundraiser.analytics.functions import get_language, get_project, roundtime, lookup_project, lookup_language
 
 
 class Command(BaseCommand):

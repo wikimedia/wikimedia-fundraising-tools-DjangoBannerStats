@@ -1,6 +1,5 @@
 from django.core.management.base import BaseCommand
 from django.db import connections, transaction, reset_queries
-from django.db.utils import IntegrityError
 
 import gc
 from datetime import datetime, timedelta
@@ -14,10 +13,9 @@ from optparse import make_option
 import os
 import urlparse
 
-# TODO: import NAME instead, so usage includes the full namespace.
-from fundraiser.analytics.functions import *
-from fundraiser.analytics.models import *
-from fundraiser.analytics.regex import *
+from fundraiser.analytics.functions import lookup_country, lookup_project, lookup_language, roundtime
+from fundraiser.analytics.models import SquidLog
+from fundraiser.analytics.regex import ignore_uas, phantomJS, sampled, squidline
 from django.conf import settings
 
 

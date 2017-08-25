@@ -13,9 +13,9 @@ from optparse import make_option
 import os
 import urlparse
 
-from fundraiser.analytics.functions import *
-from fundraiser.analytics.models import *
-from fundraiser.analytics.regex import *
+from fundraiser.analytics.functions import lookup_country, lookup_language, lookup_project, lookup_squidhost
+from fundraiser.analytics.models import SquidLog
+from fundraiser.analytics.regex import ignore_uas, phantomJS, sampled, squidline
 from django.conf import settings
 
 

@@ -14,9 +14,9 @@ import os
 from urllib import unquote
 import urlparse
 
-from fundraiser.analytics.functions import *
-from fundraiser.analytics.models import *
-from fundraiser.analytics.regex import *
+from fundraiser.analytics.functions import lookup_country, lookup_language, lookup_project, lookup_squidhost
+from fundraiser.analytics.models import LandingPageImpression, SquidLog
+from fundraiser.analytics.regex import ignore_uas, landingpages, squidline
 from django.conf import settings
 
 
