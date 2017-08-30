@@ -451,7 +451,7 @@ class Command(BaseCommand):
                             finally:
                                 self.pending_uniques = []
 
-                except Exception as e:
+                except Exception:
                     results["impression"]["error"] += 1
                     self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
                     self.logger.error("********************\n%s\n********************" % l)
@@ -464,7 +464,7 @@ class Command(BaseCommand):
                 self.pending_impressions = []
                 self.pending_uniques = []
 
-            except Exception as e:
+            except Exception:
                 self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
                 self.logger.error("********************")
 
@@ -496,7 +496,7 @@ class Command(BaseCommand):
             cursor.execute(base_sql % ', '.join(impressions))
             transaction.commit('default')
 
-        except IntegrityError as e:
+        except IntegrityError:
             # some impression was not happy
             transaction.rollback('default')
 
@@ -506,7 +506,7 @@ class Command(BaseCommand):
             for i in impressions:
                 self.write(base_sql, [i])
 
-        except Exception as e:
+        except Exception:
             transaction.rollback()
 
             self.logger.exception("UNHANDLED EXCEPTION")

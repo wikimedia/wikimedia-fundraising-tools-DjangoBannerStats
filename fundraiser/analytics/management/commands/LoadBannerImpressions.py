@@ -452,7 +452,7 @@ class Command(BaseCommand):
                                 finally:
                                     self.pending_impressions = []
 
-                except Exception as e:
+                except Exception:
                     results["impression"]["error"] += 1
                     self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING BANNER IMPRESSION **")
                     self.logger.error("********************\n%s\n********************" % l.strip())
@@ -466,7 +466,7 @@ class Command(BaseCommand):
                 self.pending_impressions = []
                 self.pending_hidden = []
 
-            except Exception as e:
+            except Exception:
                 self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
                 self.logger.error("********************")
 
@@ -500,7 +500,7 @@ class Command(BaseCommand):
 
             transaction.commit('default')
 
-        except IntegrityError as e:
+        except IntegrityError:
             # some impression was not happy
             transaction.rollback('default')
 
@@ -510,7 +510,7 @@ class Command(BaseCommand):
             for i in impressions:
                 self.write([i])
 
-        except Exception as e:
+        except Exception:
             transaction.rollback()
 
             self.logger.exception("UNHANDLED EXCEPTION")
@@ -550,7 +550,7 @@ def write_hidden(self, impressions):
 
         transaction.commit('default')
 
-    except IntegrityError as e:
+    except IntegrityError:
         # some impression was not happy
         transaction.rollback('default')
 
@@ -560,7 +560,7 @@ def write_hidden(self, impressions):
         for i in impressions:
             self.write([i])
 
-    except Exception as e:
+    except Exception:
         transaction.rollback()
 
         self.logger.exception("UNHANDLED EXCEPTION")

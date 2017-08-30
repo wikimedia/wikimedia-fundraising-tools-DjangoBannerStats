@@ -406,7 +406,7 @@ class Command(BaseCommand):
                 if not self.debug:
                     self.write(counts)
 
-            except Exception as e:
+            except Exception:
                 self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
                 self.logger.error("********************")
 
