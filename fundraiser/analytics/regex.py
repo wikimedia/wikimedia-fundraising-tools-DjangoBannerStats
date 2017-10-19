@@ -9,7 +9,7 @@ squidline = re.compile(
         \t
         (?P<timestamp>[0-9-]+T[0-9:.]+) # Timestamp
         \t
-        (?P<servicetime>[0-9.]+) # Request service time
+        (?P<servicetime>[0-9.E-]+) # Request service time
         \t
         (?P<client>[^\t]+) # Client IP address
         \t
@@ -27,8 +27,8 @@ squidline = re.compile(
         \t
         (?P<referrer>[^\t]+) # Referer header
         \t
-        (?P<xff>[^\t]+)? # X-Forwarded-For header
-        \t
+        ((?P<xff>[^\t]+) # X-Forwarded-For header
+        \t)?
         (?P<useragent>[^\t]+) # User-Agent header
         \t
         (?P<acceptlanguage>[^\t]+) # Accept-Language header
