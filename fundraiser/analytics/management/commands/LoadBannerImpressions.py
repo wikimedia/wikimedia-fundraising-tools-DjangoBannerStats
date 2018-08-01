@@ -121,8 +121,8 @@ class Command(BaseCommand):
                 time_now = datetime.now()
                 time_minus1hr = time_now - timedelta(hours=1)
 
-                now = "beaconImpressions-sampled*.tsv-%s*" % time_now.strftime("%Y%m%d-%H")
-                pasthour = "beaconImpressions-sampled*.tsv-%s*" % time_minus1hr.strftime("%Y%m%d-%H")
+                now = "beaconImpressions-sampled*.tsv[.-]%s*" % time_now.strftime("%Y%m%d-%H")
+                pasthour = "beaconImpressions-sampled*.tsv[.-]%s*" % time_minus1hr.strftime("%Y%m%d-%H")
                 now_glob = os.path.join(settings.UDP_LOG_PATH, time_now.strftime("%Y"), now)
                 pasthour_glob = os.path.join(settings.UDP_LOG_PATH, time_minus1hr.strftime("%Y"), pasthour)
 
