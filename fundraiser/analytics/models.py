@@ -24,7 +24,7 @@ class SquidLog(models.Model):
                 (beaconImpressions|landingpages)
                 (-sampled[0-9]+)?
                 (\.tab|\.tsv)?
-                -
+                [-.]
                 (?P<timestamp>[0-9-AMP]+)
                 .log.gz
             """,
