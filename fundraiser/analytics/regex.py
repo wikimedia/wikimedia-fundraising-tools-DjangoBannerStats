@@ -7,7 +7,7 @@ squidline = re.compile(
         \t[-]*
         (?P<sequence>[0-9]+) # Sequence ID from the squid server
         \t
-        (?P<timestamp>[0-9-]+T[0-9:.]+) # Timestamp
+        (?P<timestamp>[0-9-]+T[0-9:.]+Z?) # Timestamp
         \t
         (?P<servicetime>[0-9.E-]+) # Request service time
         \t
