@@ -175,7 +175,7 @@ class Command(BaseCommand):
                         "%s, %d" % (k, c), c
                     ))
 
-                except (MySQLdb.Warning, _mysql_exceptions.Warning) as e:
+                except (MySQLdb.Warning, _mysql_exceptions.Warning):
                     pass  # We don't care about the message
 
             cursor.execute(self.update_sql % ', '.join(map(str, ids)))

@@ -357,7 +357,7 @@ class Command(BaseCommand):
                                 flp_vars["form-countryspecific"]
                             ])
 
-                        if landingpage is "" or language is None or country is None or project is None:
+                        if landingpage == "" or language is None or country is None or project is None:
                             # something odd does not quite match in this request
                             results["impression"]["error"] += 1
                             self.logger.info("*** NOT ALL VARIABLES CAPTURED FOR LANDING PAGE IMPRESSION ***")

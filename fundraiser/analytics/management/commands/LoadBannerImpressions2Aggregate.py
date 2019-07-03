@@ -438,7 +438,7 @@ class Command(BaseCommand):
                     cursor.execute(insert_sql % (
                         "%s, %d" % (k, c), c
                     ))
-                except (MySQLdb.Warning, _mysql_exceptions.Warning) as e:
+                except (MySQLdb.Warning, _mysql_exceptions.Warning):
                     pass  # We don't care about the message
                 transaction.commit('default')
 
