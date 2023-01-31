@@ -1,57 +1,27 @@
-from django.core.management.base import BaseCommand
-from django.db import connections, transaction, reset_queries
-
-import gc
-from datetime import datetime, timedelta
-from dateutil.parser import parse as dateparse
+"""Parses the specified squid log file and stores the impression in the database."""
 import glob
 import gzip
 import logging
-import MySQLdb
-import _mysql_exceptions
-from optparse import make_option
 import os
-import urlparse
+import sys
+import urllib.parse
+from datetime import datetime, timedelta
+from dateutil.parser import parse as dateparse
+import MySQLdb
 
-from fundraiser.analytics.functions import lookup_country, lookup_project, lookup_language, roundtime
+from django.conf import settings
+from django.core.management.base import BaseCommand
+from django.db import connections, transaction, reset_queries
+
+from fundraiser.analytics.functions import lookup_country, lookup_project, \
+    lookup_language, roundtime
 from fundraiser.analytics.models import SquidLog
 from fundraiser.analytics.regex import ignore_uas, phantomJS, sampled, squidline
-from django.conf import settings
 
 
 class Command(BaseCommand):
 
     logger = logging.getLogger("fundraiser.analytics.load_banners")
-
-    if hasattr(BaseCommand, 'option_list'):
-        # DEPRECATED, removed in Django 1.10
-        # replaced by add_arguments below
-        option_list = BaseCommand.option_list + (
-            make_option('-f', '--file',
-                        dest='filename',
-                        default=None,
-                        help='Specify the input file'),
-            make_option('', '--verbose',
-                        dest='verbose',
-                        action='store_true',
-                        default=False,
-                        help='Provides more verbose output.'),
-            make_option('', '--top',
-                        dest='top',
-                        action='store_true',
-                        default=False,
-                        help='Only separate out top languages and projects'),
-            make_option('', '--debug',
-                        dest='debug',
-                        action='store_true',
-                        default=False,
-                        help='Do not save the impressions. Parse only.'),
-            make_option('', '--recent',
-                        dest='recent',
-                        action='store_true',
-                        default=False,
-                        help='Process recent logs.'),
-        )
 
     help = 'Parses the specified squid log file and stores the impression in the database.'
 
@@ -116,70 +86,88 @@ class Command(BaseCommand):
                 time_now = datetime.now()
                 time_minus1hr = time_now - timedelta(hours=1)
 
-                now = "beaconImpressions-sampled*.tsv[.-]%s*" % time_now.strftime("%Y%m%d-%H")
-                pasthour = "beaconImpressions-sampled*.tsv[.-]%s*" % time_minus1hr.strftime("%Y%m%d-%H")
+                now = "beaconImpressions-sampled*.tsv[.-]%s*" % \
+                    time_now.strftime("%Y%m%d-%H")
+                pasthour = "beaconImpressions-sampled*.tsv[.-]%s*" % \
+                    time_minus1hr.strftime("%Y%m%d-%H")
 
-                files.extend(glob.glob(os.path.join(settings.UDP_LOG_PATH, time_now.strftime("%Y"), now)))
-                files.extend(glob.glob(os.path.join(settings.UDP_LOG_PATH, time_minus1hr.strftime("%Y"), pasthour)))
+                files.extend(glob.glob(os.path.join(
+                    settings.UDP_LOG_PATH,
+                    time_now.strftime("%Y"),
+                    now
+                )))
+                files.extend(glob.glob(os.path.join(
+                    settings.UDP_LOG_PATH,
+                    time_minus1hr.strftime("%Y"),
+                    pasthour
+                )))
             else:
                 if os.path.isdir(filename):
                     self.logger.info("Processing directory")
                     filename = filename.rstrip('/')
                     files = glob.glob("%s/*.gz" % filename)
                 else:
-                    self.logger.info("Processing files matching %s" % filename)
+                    self.logger.info("Processing files matching %s", filename)
                     files = glob.glob(filename)
 
-            for f in sorted(files):
-                path, filename_only = f.rsplit('/', 1)
-                if not os.path.isdir(f):
+            for log_file in sorted(files):
+                filename_only = log_file.rsplit('/', 1)[-1]
+                if not os.path.isdir(log_file):
                     existing = SquidLog.objects.filter(filename=filename_only)
                     if existing:
-                        self.logger.debug("Already processed %s  - skipping" % f)
+                        self.logger.debug("Already processed %s  - skipping", log_file)
                         continue
 
-                    sq = SquidLog(filename=filename_only, impressiontype="banner")
-                    sq.timestamp = sq.filename2timestamp()
+                    squid_log = SquidLog(filename=filename_only, impressiontype="banner")
+                    squid_log.timestamp = squid_log.filename2timestamp()
 
-                    if sq.timestamp > datetime(2012, 10, 1):
+                    if squid_log.timestamp > datetime(2012, 10, 1):
                         self.recent = True
 
-                    results = self.process_file(f)
+                    results = self.process_file(log_file)
 
                     if not self.debug:
-                        sq.save()
+                        squid_log.save()
 
                     self.matched += results["squid"]["match"]
                     self.nomatched += results["squid"]["nomatch"]
 
-                    self.logger.info("DONE - %s" % f)
-                    self.logger.info("\tSQUID: %d OKAY / %d FAILED with %d IGNORED and ..." % (
+                    self.logger.info("DONE - %s", log_file)
+                    self.logger.info(
+                        "\tSQUID: %d OKAY / %d FAILED with %d IGNORED and ...",
                         int(results["squid"]["match"]),
                         int(results["squid"]["nomatch"]),
                         int(results["squid"]["ignored"])
-                    ))
+                    )
                     for code in results['squid']['codes']:
-                        self.logger.info("\t\tIGNORED CACHE RESPONSE CODE %d: %d" % (
+                        self.logger.info(
+                            "\t\tIGNORED CACHE RESPONSE CODE %d: %d",
                             int(code),
                             results['squid']['codes'][code]
-                        ))
-                    self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
+                        )
+                    self.logger.info(
+                        "\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR",
                         results["impression"]["match"],
                         results["impression"]["nomatch"],
                         results["impression"]["ignored"],
-                        results["impression"]["error"],
-                    ))
+                        results["impression"]["error"]
+                    )
                     for reason in results['impression']['ignore_because']:
-                        self.logger.info("\t\tIGNORED IMPRESSION BECAUSE %s: %d" % (
+                        self.logger.info(
+                            "\t\tIGNORED IMPRESSION BECAUSE %s: %d",
                             reason,
                             results['impression']['ignore_because'][reason]
-                        ))
+                        )
 
             endtime = datetime.now()
             self.logger.info("DONE")
-            self.logger.info("Total squid matched: %d" % self.matched)
-            self.logger.info("Total squid not matched: %d" % self.nomatched)
-            self.logger.info("Finished in %d.%d seconds" % ((endtime - starttime).seconds, (endtime - starttime).microseconds))
+            self.logger.info("Total squid matched: %d", self.matched)
+            self.logger.info("Total squid not matched: %d", self.nomatched)
+            self.logger.info(
+                "Finished in %d.%d seconds",
+                (endtime - starttime).seconds, (endtime - starttime).microseconds
+            )
+
         except Exception:
             self.logger.exception("Error processing files")
 
@@ -189,10 +177,10 @@ class Command(BaseCommand):
             return
 
         if not os.path.exists(filename):
-            self.logger.error("Error loading banner impressions - File %s does not exist" % filename)
+            self.logger.error("Error loading banner impressions - File %s does not exist", filename)
             return
 
-        self.logger.error("Processing %s" % filename)
+        self.logger.error("Processing %s", filename)
 
         results = {
             "squid": {
@@ -234,7 +222,7 @@ class Command(BaseCommand):
 
         counts = dict()
 
-        path, filename_only = filename.rsplit('/', 1)
+        filename_only = filename.rsplit('/', 1)[-1]
         if sampled.match(filename_only):
             sample_rate = int(sampled.match(filename_only).group("samplerate"))
 
@@ -242,19 +230,21 @@ class Command(BaseCommand):
         try:
             i = 0
 
-            for l in file:
+            for log_line in file:
+
                 i += 1
                 try:
-                    m = squidline.match(l)
-                    if not m:
-                        # TODO: do we want to write the failed lines to another file for reprocessing?
+                    match = squidline.match(log_line.decode("latin_1"))
+                    if not match:
+                        # TODO: do we want to write the failed lines to another
+                        # file for reprocessing?
                         results["squid"]["nomatch"] += 1
                         if self.verbose:
                             if results["squid"]["nomatch"] < 100:
                                 self.logger.info("*** NO MATCH FOR BANNER IMPRESSION ***")
-                                self.logger.info("--- File: %s | Line: %d ---" % (filename, i + 1))
-                                self.logger.info(l[:500])
-                                if len(l) > 500:
+                                self.logger.info("--- File: %s | Line: %d ---", filename, i + 1)
+                                self.logger.info(log_line[:500])
+                                if len(log_line) > 500:
                                     self.logger.info("...TRUNCATED...")
                                 self.logger.info("*** END OF NO MATCH ***")
                     else:
@@ -262,12 +252,12 @@ class Command(BaseCommand):
 
                         # Go ahead and ignore SSL termination logs since they are missing GET params
                         # and are followed by a proper squid log for the request
-                        if m.group("squid")[:3] == "ssl":
+                        if match.group("squid")[:3] == "ssl":
                             results["squid"]["ignored"] += 1
                             continue
 
                         # Ignore everything but status 200
-                        squidstatus = int(m.group("squidstatus")[-3:])
+                        squidstatus = int(match.group("squidstatus")[-3:])
                         if squidstatus not in (0, 200, 204, 206, 304):
                             results["squid"]["ignored"] += 1
                             if squidstatus not in results['squid']['codes']:
@@ -277,79 +267,71 @@ class Command(BaseCommand):
 
                         if self.recent:
                             # yeah, ignore this too
-                            if "Special:BannerRandom" in m.group("url"):
+                            if "Special:BannerRandom" in match.group("url"):
                                 results["impression"]["ignored"] += 1
                                 results["impression"]["ignore_because"]["file"] += 1
-                                continue
-
-                            # Also ignore anything coming from Aluminium or Grosley
-                            if m.group("client") == "208.80.154.6" or m.group("client") == "208.80.152.164":
-                                results["impression"]["ignored"] += 1
-                                results["impression"]["ignore_because"]["client"] += 1
-                                continue
-
-                            # Also ignore anything forward for ALuminium or Grosley
-                            if m.group("xff") == "208.80.154.6" or m.group("xff") == "208.80.152.164":
-                                results["impression"]["ignored"] += 1
-                                results["impression"]["ignore_because"]["client"] += 1
                                 continue
 
                             # And ignore all of our testing UA's
-                            for ua in ignore_uas:
-                                if ua.match(m.group("useragent")):
+                            for user_agent in ignore_uas:
+                                if user_agent.match(match.group("useragent")):
                                     results["impression"]["ignored"] += 1
                                     results["impression"]["ignore_because"]["client"] += 1
                                     continue
-                            if phantomJS.search(m.group("useragent")):
+                            if phantomJS.search(match.group("useragent")):
                                 results["impression"]["ignored"] += 1
                                 results["impression"]["ignore_because"]["client"] += 1
                                 continue
 
-                        timestamp = dateparse(m.group("timestamp"))
-                        url = urlparse.urlparse(m.group("url"))
-                        qs = urlparse.parse_qs(url.query, keep_blank_values=True)
+                        timestamp = dateparse(match.group("timestamp"))
+                        url = urllib.parse.urlparse(match.group("url"))
+                        query_string = urllib.parse.parse_qs(url.query, keep_blank_values=True)
 
-                        country = qs["country"][0] if "country" in qs else "XX"
-                        language = qs["userlang"][0] if "userlang" in qs else "en"
-                        language = qs["uselang"][0] if "uselang" in qs else language
+                        country_string = query_string["country"][0] if "country" in query_string else "XX"
+                        country = lookup_country(country_string, self.logger)
+                        country_id = country.id if country else None
+
+                        language_string = "en"
+                        if "uselang" in query_string:
+                            language_string = query_string["uselang"][0]
+                        elif "userlang" in query_string:
+                            language_string = query_string["userlang"][0]
+                        elif "language" in query_string:
+                            language_string = query_string["language"][0]
+
+                        language = None
+                        if self.top:
+                            if language_string in self.detail_languages:
+                                language = lookup_language(language_string, self.logger)
+                            else:
+                                language = lookup_language("other", self.logger)
+                        else:
+                            language = lookup_language(language_string, self.logger)
 
                         banner = ""
-                        if "banner" in qs:
-                            banner = qs["banner"][0].replace("%", "%%")
+                        if "banner" in query_string:
+                            banner = query_string["banner"][0].replace("%", "%%")
+
                         campaign = ""
-                        if "campaign" in qs:
-                            campaign = qs["campaign"][0].replace("%", "%%")
+                        if "campaign" in query_string:
+                            campaign = query_string["campaign"][0].replace("%", "%%")
+
                         project = None
-                        if "db" in qs:
-                            project = lookup_project(qs["db"][0])
-                            if self.top and not qs["db"][-4:] == "wiki":
-                                project = lookup_project("other_project")
-
-                        if self.top:
-                            if language in self.detail_languages:
-                                language = lookup_language(language)
-                            else:
-                                language = lookup_language("other")
+                        if "db" in query_string:
+                            project = lookup_project(query_string["db"][0], self.logger)
+                            if self.top and not query_string["db"][-4:] == "wiki":
+                                project = lookup_project("other_project", self.logger)
                         else:
-                            language = lookup_language(language)
+                            project = lookup_project("", self.logger)
 
-                        country = lookup_country(country)
-
-                        if banner == "" or campaign == "" or project is None:
-                            if "BannerController" in l:
-                                # we really don't care about these, so there is no need to log them as errors
-                                results["impression"]["ignored"] += 1
-                                results["impression"]["ignore_because"]["file"] += 1
-                                continue
-
-                        if "result" in qs and qs["result"][0] == "hide":
+                        if "result" in query_string and query_string["result"][0] == "hide":
                             results["impression"]["ignored"] += 1
 
-                            if "reason" in qs:
+                            if "reason" in query_string:
 
                                 # Switch "cookie" to "hidecookie" and "empty" to "hideempty"
                                 # for consistency with legacy reasons in the database
-                                reason = qs["reason"][0]
+                                reason = query_string["reason"][0]
                                 if reason == "cookie":
                                     reason = "hidecookie"
                                 if reason == "empty":
@@ -360,54 +342,66 @@ class Command(BaseCommand):
                                 else:
                                     results["impression"]["ignore_because"]["other"] += 1
 
-                            continue
+                                continue
+
+                                # ^^^ fixed (?) this which was mis-indented,
+                                # rendering the next block unreachable
 
                             results["impression"]["error"] += 1
                             if self.verbose:
-                                self.logger.exception("** INVALID BANNER IMPRESSION - NOT ENOUGH DATA TO RECORD **")
-                                self.logger.error("********************\n%s\n********************" % l.strip())
+                                self.logger.exception(
+                                    "** INVALID BANNER IMPRESSION - NOT ENOUGH DATA TO RECORD **"
+                                )
+                                self.logger.error(
+                                    "********************\n%s\n********************",
+                                    log_line.strip()
+                                )
                             continue
 
                         # not using the models here saves a lot of wall time
                         try:
-                            k = "'%s', '%s', '%s', %d, %d, %d" % (
+                            key = tuple((
                                 roundtime(timestamp, 1, False).strftime("%Y-%m-%d %H:%M:%S"),
-                                MySQLdb.escape_string(banner),
-                                MySQLdb.escape_string(campaign),
+                                banner,
+                                campaign,
                                 project.id,
                                 language.id,
-                                country.id,
-                            )
-                            if k in counts:
-                                counts[k] += sample_rate
+                                country_id
+                            ))
+                            if key in counts:
+                                counts[key] += sample_rate
                             else:
-                                counts[k] = sample_rate
+                                counts[key] = sample_rate
 
                             results["impression"]["match"] += 1
-
                         except Exception:
                             results["impression"]["error"] += 1
-                            self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING BANNER IMPRESSION **")
-                            self.logger.error("********************\n%s\n********************" % l.strip())
-
-                        finally:
-                            del m, url, qs, k
-                            del timestamp, banner, campaign, project, language, country
+                            self.logger.exception(
+                                "** UNHANDLED EXCEPTION WHILE PROCESSING BANNER IMPRESSION **"
+                            )
+                            self.logger.error(
+                                "********************\n%s\n********************",
+                                log_line.strip()
+                            )
 
                 except Exception:
                     results["impression"]["error"] += 1
-                    self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING BANNER IMPRESSION **")
-                    self.logger.error("********************\n%s\n********************" % l.strip())
-
-                finally:
-                    del l
+                    self.logger.exception(
+                        "** UNHANDLED EXCEPTION WHILE PROCESSING BANNER IMPRESSION **"
+                    )
+                    self.logger.error(
+                        "********************\n%s\n********************",
+                        log_line.strip()
+                    )
 
             try:
                 if not self.debug:
                     self.write(counts)
 
             except Exception:
-                self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
+                self.logger.exception(
+                    "** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **"
+                )
                 self.logger.error("********************")
 
         except IOError:
@@ -415,46 +409,39 @@ class Command(BaseCommand):
         finally:
             file.close()
 
-        del counts, file
-
-        gc.collect()
-
         reset_queries()
 
         return results
 
     def write(self, impressions):
-        insert_sql = "INSERT INTO bannerimpressions (timestamp, banner, campaign, project_id, language_id, country_id, count) VALUES (%s) ON DUPLICATE KEY update count=count+%d"
+        insert_sql = """INSERT INTO bannerimpressions (timestamp, banner, campaign,
+            project_id, language_id, country_id, count)
+            VALUES (%s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY update count=count+(%s)"""
 
-        if not len(impressions):
+        if not impressions:
             return
 
         transaction.set_autocommit(False)
         cursor = connections['default'].cursor()
 
         try:
-            for k, c in impressions.iteritems():
+            for key, count in impressions.items():
                 try:
-                    cursor.execute(insert_sql % (
-                        "%s, %d" % (k, c), c
-                    ))
-                except (MySQLdb.Warning, _mysql_exceptions.Warning):
+                    cursor.execute(insert_sql, list(key) + [count, count])
+                except MySQLdb._exceptions.Warning:
                     pass  # We don't care about the message
                 transaction.commit('default')
 
-        except Exception as e:
-            import sys
+        except Exception as exception:
             transaction.rollback("default")
-            self.logger.exception("UNHANDLED EXCEPTION: %s" % str(e))
+            self.logger.exception("UNHANDLED EXCEPTION: %s", str(exception))
             self.logger.exception(sys.exc_info()[0])
             if self.debug:
                 if len(impressions) == 1:
                     self.logger.info(impressions)
 
                 for r in self.debug_info:
-                    self.logger.info("\t%s" % r)
+                    self.logger.info("\t%s", r)
         finally:
             reset_queries()
-            del impressions
-            del cursor
             transaction.set_autocommit(True)

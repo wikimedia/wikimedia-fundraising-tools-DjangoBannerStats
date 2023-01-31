@@ -1,31 +1,34 @@
 # Django settings for fundraiser project.
 
-DEBUG = True
-TEMPLATE_DEBUG = DEBUG
+# Proxy log source directory
+UDP_LOG_PATH = "/srv/archive/banner_logs"
 
+# Database configuration
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',  # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': '',                      # Or path to database file if using sqlite3.
-        'USER': '',                      # Not used with sqlite3.
-        'PASSWORD': '',                  # Not used with sqlite3.
-        'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
-    }
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': '<DATABASE_NAME',
+        'USER': '<DATABASE_USER>',
+        'PASSWORD': '<TOP_SECRET_1>',
+        'HOST': '<DATABASE_SERVER>',
+        'PORT': '',
+    },
 }
+
+# Make this unique, and don't share it with anybody.
+SECRET_KEY = '<TOP_SECRET_2>'
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
-# although not all choices may be available on all operating systems.
-# On Unix systems, a value of None will cause Django to use the same
-# timezone as the operating system.
-# If running in a Windows environment this must be set to the same as your
-# system time zone.
 TIME_ZONE = None  # 'America/Chicago' # Setting to None to keep things in UTC
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
 LANGUAGE_CODE = 'en-us'
+
+# Logging level adjustment
+DEBUG = True
+TEMPLATE_DEBUG = DEBUG
 
 SITE_ID = 1
 
@@ -40,13 +43,9 @@ USE_L10N = True
 # If you set this to False, Django will not use timezone-aware datetimes.
 USE_TZ = False
 
-# Make this unique, and don't share it with anybody.
-SECRET_KEY = 'bcsz$xo#=a__75o4g$stg6s*+d$cpelg$mrp)kgsvm1eqkv@4^'
-
-INSTALLED_APPS = (
-    'django.contrib.messages',
+INSTALLED_APPS = [
     'fundraiser.analytics'
-)
+]
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -81,9 +80,29 @@ LOGGING = {
     }
 }
 
-UDP_LOG_PATH = "/srv/archive/banner_logs"
-
-try:
-    from local_settings import *
-except ImportError:
-    pass
+# In-memory object caches to reduce database query load
+CACHES = {
+    'default': {},
+    'country': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'country',
+        'TIMEOUT': None,
+        'MAX_ENTRIES': 3000,
+    },
+    'language': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'language',
+        'TIMEOUT': None,
+        'MAX_ENTRIES': 1000,
+    },
+    'project': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'project',
+        'TIMEOUT': None,
+    },
+    'squid': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'squid',
+        'TIMEOUT': None,
+    },
+}

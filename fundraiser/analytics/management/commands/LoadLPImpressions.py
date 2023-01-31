@@ -1,65 +1,38 @@
-from django.core.management.base import BaseCommand
-from django.db import connections, transaction
-from django.db.utils import IntegrityError
-
+"""Parses the specified squid log file and stores the impression in the database."""
 import gc
 from datetime import datetime, timedelta
-from dateutil.parser import parse as dateparse
 import glob
 import gzip
 import logging
-import MySQLdb
-from optparse import make_option
 import os
-from urllib import unquote
-import urlparse
-
-from fundraiser.analytics.functions import lookup_country, lookup_language, lookup_project, lookup_squidhost
+from urllib.parse import unquote
+import urllib.parse
+import MySQLdb
+from django.conf import settings
+from django.core.management.base import BaseCommand
+from django.db import connections, transaction
+import django.db.utils
+from dateutil.parser import parse as dateparse
+from fundraiser.analytics.functions \
+    import lookup_country, lookup_language, lookup_project, lookup_squidhost
 from fundraiser.analytics.models import LandingPageImpression, SquidLog
 from fundraiser.analytics.regex import ignore_uas, landingpages, squidline
-from django.conf import settings
 
 
 class Command(BaseCommand):
 
     logger = logging.getLogger("fundraiser.analytics.load_lps")
 
-    if hasattr(BaseCommand, 'option_list'):
-        # DEPRECATED, removed in Django 1.10
-        # replaced by add_arguments below
-        option_list = BaseCommand.option_list + (
-            make_option('-f', '--file',
-                        dest='filename',
-                        default=None,
-                        help='Specify the input file'),
-            make_option('', '--verbose',
-                        dest='verbose',
-                        action='store_true',
-                        default=False,
-                        help='Provides more verbose output.'),
-            make_option('', '--debug',
-                        dest='debug',
-                        action='store_true',
-                        default=False,
-                        help='Do not save the impressions. Parse only.'),
-            make_option('', '--recent',
-                        dest='recent',
-                        action='store_true',
-                        default=False,
-                        help='Process recent logs.'),
-            make_option('', '--alt',
-                        dest='alt',
-                        action='store_true',
-                        default=False,
-                        help="Save to alternate tables.  Allows for reprocessing and then a table rename."
-                        "NOTE: This requires the associated SquidLog records to be removed."
-                        )
-        )
-    help = 'Parses the specified squid log file and stores the impression in the database.'
+    help = "Parses the specified squid log file and stores the impression in the database."
 
-    impression_sql = "INSERT INTO `landingpageimpression_raw%s` (timestamp, squid_id, squid_sequence, utm_source, utm_campaign, utm_key, utm_medium, landingpage, project_id, language_id, country_id) VALUES %s"
-    # Using ON DUPLICATE KEY UPDATE with a deliberate no-op rather than INSERT IGNORE, as the latter raises warnings
-    unique_sql = "INSERT INTO `donatewiki_unique` (timestamp, utm_source, utm_campaign, contact_id, link_id) VALUES %s ON DUPLICATE KEY UPDATE link_id=link_id"
+    impression_sql = """REPLACE INTO `landingpageimpression_raw%s` (timestamp, squid_id,
+         squid_sequence, utm_source, utm_campaign, utm_key, utm_medium, landingpage,
+         project_id, language_id, country_id) VALUES (%s)"""
+
+    # Using ON DUPLICATE KEY UPDATE with a deliberate no-op rather than INSERT
+    # IGNORE, as the latter raises warnings
+    unique_sql = """INSERT INTO `donatewiki_unique` (timestamp, utm_source, utm_campaign,
+        contact_id, link_id) VALUES (%s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE link_id=link_id"""
 
     pending_impressions = []
     pending_uniques = []
@@ -78,7 +51,7 @@ class Command(BaseCommand):
             '--file',
             dest='filename',
             default=None,
-            help='Specify the input file')
+            help='Specify the input file(s)')
         parser.add_argument(
             '--verbose',
             dest='verbose',
@@ -119,9 +92,9 @@ class Command(BaseCommand):
             self.ignored = 0
 
             if self.alt:
-                self.impression_sql = self.impression_sql % ("_alt", "%s")
+                self.impression_sql = self.impression_sql % ("_alt", "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s")
             else:
-                self.impression_sql = self.impression_sql % ("", "%s")
+                self.impression_sql = self.impression_sql % ("", "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s")
 
             files = []
             if self.recent:
@@ -134,7 +107,7 @@ class Command(BaseCommand):
                 now_glob = os.path.join(settings.UDP_LOG_PATH, time_now.strftime("%Y"), now)
                 pasthour_glob = os.path.join(settings.UDP_LOG_PATH, time_minus1hr.strftime("%Y"), pasthour)
 
-                self.logger.info("Checking for files matching '{now}' or '{pasthour}'".format(now=now_glob, pasthour=pasthour_glob))
+                self.logger.info("Checking for files matching '%s' or '%s'", now_glob, pasthour_glob)
 
                 files.extend(glob.glob(now_glob))
                 files.extend(glob.glob(pasthour_glob))
@@ -144,17 +117,17 @@ class Command(BaseCommand):
                     filename = filename.rstrip('/')
                     files = glob.glob("%s/landingpages*.gz" % filename)
                 else:
-                    self.logger.info("Processing files matching %s" % filename)
+                    self.logger.info("Processing files matching %s", filename)
                     files = glob.glob(filename)
 
-            self.logger.info("Examining {num} files".format(num=len(files)))
+            self.logger.info("Examining %s files", len(files))
 
             for f in files:
-                path, filename_only = f.rsplit('/', 1)
+                _, filename_only = f.rsplit('/', 1)
                 if not os.path.isdir(f):
                     existing = SquidLog.objects.filter(filename=filename_only, impressiontype="landingpage")
                     if existing:
-                        self.logger.debug("Already processed %s  - skipping" % f)
+                        self.logger.debug("Already processed %s  - skipping", f)
                         continue
 
                     results = self.process_file(f)
@@ -167,25 +140,27 @@ class Command(BaseCommand):
                     self.matched += results["squid"]["match"]
                     self.nomatched += results["squid"]["nomatch"]
 
-                    self.logger.info("DONE - %s" % f)
-                    self.logger.info("\tSQUID: %d OKAY / %d FAILED with %d IGNORED and %d 404s" % (
+                    self.logger.info("DONE - %s", f)
+                    self.logger.info(
+                        "\tSQUID: %d OKAY / %d FAILED with %d IGNORED and %d 404s",
                         results["squid"]["match"],
                         results["squid"]["nomatch"],
                         results["squid"]["ignored"],
                         results["squid"]["404"]
-                    ))
-                    self.logger.info("\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR" % (
+                    )
+                    self.logger.info(
+                        "\tIMPRESSIONS: %d MATCHED / %d NOMATCH with %d IGNORED / %d ERROR",
                         results["impression"]["match"],
                         results["impression"]["nomatch"],
                         results["impression"]["ignored"],
                         results["impression"]["error"],
-                    ))
+                    )
 
             endtime = datetime.now()
             self.logger.info("DONE")
-            self.logger.info("Total squid matched: %d" % self.matched)
-            self.logger.info("Total squid not matched: %d" % self.nomatched)
-            self.logger.info("Finished in %d.%d seconds" % ((endtime - starttime).seconds, (endtime - starttime).microseconds))
+            self.logger.info("Total squid matched: %d", self.matched)
+            self.logger.info("Total squid not matched: %d", self.nomatched)
+            self.logger.info("Finished in %d.%d seconds", (endtime - starttime).seconds, (endtime - starttime).microseconds)
         except Exception:
             self.logger.exception("Error processing files")
 
@@ -195,10 +170,10 @@ class Command(BaseCommand):
             return
 
         if not os.path.exists(filename):
-            self.logger.error("Error loading landing page impressions - File %s does not exist" % filename)
+            self.logger.error("Error loading landing page impressions - File %s does not exist", filename)
             return
 
-        self.logger.info("Processing %s" % filename)
+        self.logger.info("Processing %s", filename)
 
         results = {
             "squid": {
@@ -221,19 +196,26 @@ class Command(BaseCommand):
         try:
             i = 0
 
-            for l in file:
+            for line in file:
                 i += 1
                 try:
-                    m = squidline.match(l)
+
+                    m = None
+                    try:
+                        m = squidline.match(line.decode("latin_1"))
+                    except Exception as decode_error:
+                        self.logger.info(decode_error)
+                        self.logger.info(line)
+
                     if not m:
                         # TODO: do we want to write the failed lines to another file for reprocessing?
                         results["squid"]["nomatch"] += 1
                         if self.verbose:
                             if results["squid"]["nomatch"] < 100:
                                 self.logger.info("*** NO MATCH FOR LANDING PAGE IMPRESSION ***")
-                                self.logger.info("--- File: %s | Line: %d ---" % (filename, i + 1))
-                                self.logger.info(l[:500])
-                                if len(l) > 500:
+                                self.logger.info("--- File: %s | Line: %d ---", filename, i + 1)
+                                self.logger.info(line[:500].decode("utf-8"))
+                                if len(line) > 500:
                                     self.logger.info("...TRUNCATED...")
                                 self.logger.info("*** END OF NO MATCH ***")
                     else:
@@ -243,16 +225,6 @@ class Command(BaseCommand):
                         # and are followed by a proper squid log for the request
                         if m.group("squid")[:3] == "ssl":
                             results["squid"]["ignored"] += 1
-                            continue
-
-                        # Also ignore anything coming from ALuminium or Grosley
-                        if m.group("client") == "208.80.154.6" or m.group("client") == "208.80.152.164":
-                            results["impression"]["ignored"] += 1
-                            continue
-
-                        # Also ignore anything forward for ALuminium or Grosley
-                        if m.group("xff") == "208.80.154.6" or m.group("xff") == "208.80.152.164":
-                            results["impression"]["ignored"] += 1
                             continue
 
                         # And ignore all of our testing UA's
@@ -267,11 +239,11 @@ class Command(BaseCommand):
                         while unquote(url_uni) != url_uni:
                             url_uni = unquote(url_uni)
 
-                        url_uni = unicode(url_uni, 'latin_1').encode('utf-8')
+                        url_uni = url_uni.encode('utf-8')
 
                         # check the landing page patterns
                         for r in landingpages:
-                            record = r.match(url_uni)
+                            record = r.match(url_uni.decode('utf-8'))
                             if record:
                                 results["impression"]["match"] += 1
                                 break
@@ -281,8 +253,8 @@ class Command(BaseCommand):
                             continue
 
                         # go ahead and parse the URL
-                        url = urlparse.urlparse(url_uni)
-                        qsi = urlparse.parse_qs(url.query, keep_blank_values=True)
+                        url = urllib.parse.urlparse(url_uni.decode("utf-8"))
+                        qsi = urllib.parse.parse_qs(url.query, keep_blank_values=True)
                         qs = {}
                         # convert parameter names to lowercase
                         for p in qsi:
@@ -310,30 +282,32 @@ class Command(BaseCommand):
                             link_id = qs["link_id"][0].replace("%", "%%")
 
                         landingpage = ""
-                        language = None
-                        country = None
                         project = None
 
                         self.debug_info = []
 
-                        country = qs["country"][0] if "country" in qs else "XX"
+                        if "country" in qs:
+                            country = lookup_country(qs["country"][0], self.logger)
+                        else:
+                            country = lookup_country("XX", self.logger)
 
                         if "uselang" in qs:
-                            language = qs["uselang"][0]
+                            language = lookup_language(qs["uselang"][0], self.logger)
+                        elif "userlang" in qs:
+                            language = lookup_language(qs["userlang"][0], self.logger)
                         elif "language" in qs:
-                            language = qs["language"][0]
+                            language = lookup_language(qs["language"][0], self.logger)
                         else:
-                            language = "en"
-
-                        language = lookup_language(language)
-                        country = lookup_country(country)
+                            language = lookup_language("en", self.logger)
 
                         if "landingpage" in record.groupdict():
-                            project = lookup_project("foundationwiki")  # TODO: this should reflect the source project not the LP wiki
+                            # TODO: this should reflect the source project not the LP wiki
+                            project = lookup_project("foundationwiki", self.logger)
                             landingpage = record.group("landingpage").rsplit('/', 2)[0]
 
                         else:
-                            project = lookup_project("donatewiki")  # TODO: this should reflect the source project not the LP wiki
+                            # TODO: this should reflect the source project not the LP wiki
+                            project = lookup_project("donatewiki", self.logger)
 
                             flp_vars = {
                                 "template": qs["template"][0] if "template" in qs else "default",
@@ -344,8 +318,8 @@ class Command(BaseCommand):
                             }
 
                             # go ahead and remove the cruft from the lp variables
-                            for k, v in flp_vars.iteritems():
-                                before, sep, after = v.rpartition('-')
+                            for k, v in flp_vars.items():
+                                _, _, after = v.rpartition('-')
                                 if after:
                                     flp_vars[k] = after
 
@@ -361,7 +335,7 @@ class Command(BaseCommand):
                             # something odd does not quite match in this request
                             results["impression"]["error"] += 1
                             self.logger.info("*** NOT ALL VARIABLES CAPTURED FOR LANDING PAGE IMPRESSION ***")
-                            self.logger.info("--- File: %s | Line: %d ---" % (filename, i + 1))
+                            self.logger.info("--- File: %s | Line: %d ---", filename, i + 1)
                             self.logger.info(m.group("url")[:200])
                             if len(m.group("url")) > 200:
                                 self.logger.info("...TRUNCATED...")
@@ -377,60 +351,44 @@ class Command(BaseCommand):
 
                         # truncate to db max lengths
                         utm_campaign = utm_campaign[:255]
+                        utm_medium = utm_medium[:255]
                         utm_source = utm_source[:255]
+                        utm_key = utm_key[:128]
                         contact_id = contact_id[:31]
                         link_id = link_id[:127]
 
-                        squid = lookup_squidhost(hostname=m.group("squid"), verbose=self.verbose)
-                        seq = 0  # Can't do int(m.group("sequence")) because its > 2^32 and I don't want to run an alter
+                        squid = lookup_squidhost(hostname=m.group("squid"), logger=self.logger)
+
+                        # Can't do int(m.group("sequence")) because its > 2^32
+                        # and I don't want to run an alter
+                        seq = 0
+
                         timestamp = dateparse(m.group("timestamp"))
-                        sql_time = MySQLdb.escape_string(str(timestamp.strftime("%Y-%m-%d %H:%M:%S")))
 
                         # not using the models here saves a lot of wall time
-                        try:
-                            lp_tmp = "('%s',%s, %s, '%s', '%s', '%s', '%s', '%s', %s, %s, %s)" % (
-                                sql_time,
-                                MySQLdb.escape_string(str(squid.id)),
-                                MySQLdb.escape_string(str(seq)),
-                                MySQLdb.escape_string(utm_source),
-                                MySQLdb.escape_string(utm_campaign),
-                                MySQLdb.escape_string(utm_key),
-                                MySQLdb.escape_string(utm_medium),
-                                MySQLdb.escape_string(landingpage),
-                                MySQLdb.escape_string(str(project.id)),
-                                MySQLdb.escape_string(str(language.id)),
-                                MySQLdb.escape_string(str(country.id))
-                            )
-                            lp_tmp = lp_tmp.replace("%", "")
-                            self.pending_impressions.append(lp_tmp)
-
-                        except Exception:
-                            results["impression"]["error"] += 1
-                            self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
-                            self.logger.error("********************\n%s\n********************" % l)
-
-                        finally:
-                            lp_tmp = ""
+                        self.pending_impressions.append([
+                            timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                            squid.id,
+                            seq,
+                            utm_source,
+                            utm_campaign,
+                            utm_key,
+                            utm_medium,
+                            landingpage,
+                            project.id,
+                            language.id,
+                            country.id
+                        ])
 
                         if url.hostname == 'donate.wikimedia.org' and contact_id != '':
-                            try:
-                                uq_tmp = "('%s', '%s', '%s', '%s', '%s')" % (
-                                    sql_time,
-                                    MySQLdb.escape_string(utm_source),
-                                    MySQLdb.escape_string(utm_campaign),
-                                    MySQLdb.escape_string(contact_id),
-                                    MySQLdb.escape_string(link_id),
-                                )
-                                uq_tmp = uq_tmp.replace("%", "")
-                                self.pending_uniques.append(uq_tmp)
 
-                            except Exception:
-                                results["impression"]["error"] += 1
-                                self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING DONATEWIKI HIT **")
-                                self.logger.error("********************\n%s\n********************" % l)
-
-                            finally:
-                                uq_tmp = ""
+                            self.pending_uniques.append([
+                                str(timestamp.strftime("%Y-%m-%d %H:%M:%S")),
+                                utm_source,
+                                utm_campaign,
+                                contact_id,
+                                link_id,
+                            ])
 
                         # write the models in batch
                         if len(self.pending_impressions) % batch_size == 0:
@@ -447,14 +405,18 @@ class Command(BaseCommand):
                                 if not self.debug:
                                     self.write(self.unique_sql, self.pending_uniques)
                             except Exception:
-                                self.logger.exception("Error writing donatewiki uniques to the database")
+                                self.logger.exception(
+                                    "Error writing donatewiki uniques to the database"
+                                )
                             finally:
                                 self.pending_uniques = []
 
                 except Exception:
                     results["impression"]["error"] += 1
-                    self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
-                    self.logger.error("********************\n%s\n********************" % l)
+                    self.logger.exception(
+                        "** UNHANDLED EXCEPTION #1 WHILE PROCESSING LANDING PAGE IMPRESSION **"
+                    )
+                    self.logger.error("********************\n%s\n********************", line)
 
             try:
                 # write out any remaining records
@@ -465,7 +427,9 @@ class Command(BaseCommand):
                 self.pending_uniques = []
 
             except Exception:
-                self.logger.exception("** UNHANDLED EXCEPTION WHILE PROCESSING LANDING PAGE IMPRESSION **")
+                self.logger.exception(
+                    "** UNHANDLED EXCEPTION #2 WHILE PROCESSING LANDING PAGE IMPRESSION **"
+                )
                 self.logger.error("********************")
 
         except IOError:
@@ -493,11 +457,11 @@ class Command(BaseCommand):
 
         try:
             # attempt to create all in batches
-            cursor.execute(base_sql % ', '.join(impressions))
+            cursor.executemany(base_sql, impressions)
             transaction.commit('default')
-
-        except IntegrityError:
+        except (django.db.utils.IntegrityError, django.db.utils.OperationalError, MySQLdb._exceptions.OperationalError) as my_error:
             # some impression was not happy
+            self.logger.info("ERROR %s", my_error)
             transaction.rollback('default')
 
             if i_len == 1:
@@ -506,16 +470,16 @@ class Command(BaseCommand):
             for i in impressions:
                 self.write(base_sql, [i])
 
-        except Exception:
+        except Exception as exception:
             transaction.rollback()
 
-            self.logger.exception("UNHANDLED EXCEPTION")
+            self.logger.exception("UNHANDLED EXCEPTION %s", exception)
 
             if self.debug:
-                self.logger.info(self.impression_sql % ', '.join(impressions))
+                self.logger.info(self.impression_sql, ', '.join(impressions))
 
                 for r in self.debug_info:
-                    self.logger.info("\t%s" % r)
+                    self.logger.info("\t%s", r)
 
             if i_len == 1:
                 return
