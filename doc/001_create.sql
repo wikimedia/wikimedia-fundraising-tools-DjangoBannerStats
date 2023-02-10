@@ -45,7 +45,7 @@ CREATE TABLE country (
   iso_code varchar(8) NOT NULL,
   PRIMARY KEY (id),
   UNIQUE KEY iso_code (iso_code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS donatewiki_unique;
 CREATE TABLE donatewiki_unique (
@@ -111,7 +111,7 @@ CREATE TABLE language (
   iso_code varchar(24) NOT NULL,
   PRIMARY KEY (id),
   UNIQUE KEY iso_code (iso_code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS optout;
 CREATE TABLE optout (
@@ -139,7 +139,7 @@ CREATE TABLE project (
   project varchar(128) NOT NULL,
   PRIMARY KEY (id),
   UNIQUE KEY project (project)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS squidhost;
 CREATE TABLE squidhost (
