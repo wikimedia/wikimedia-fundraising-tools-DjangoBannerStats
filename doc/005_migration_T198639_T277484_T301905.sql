@@ -4,7 +4,7 @@
 # T301905: modernize DjangoBannerStats to python3                                    #
 ######################################################################################
 
-SET character_set_client="utf8mb4"
+SET character_set_client="utf8mb4";
 
 ###########################
 # PURGE DEPRECATED TABLES #
