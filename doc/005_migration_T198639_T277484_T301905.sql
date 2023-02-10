@@ -32,10 +32,11 @@ CREATE TABLE country_new (
   iso_code varchar(8) NOT NULL,
   PRIMARY KEY (id),
   UNIQUE KEY iso_code (iso_code)
-) ENGINE=InnoDB AUTO_INCREMENT=2608 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 # import countries with valid ISO country codes, referencing list from civicrm
-INSERT INTO country_new SELECT c.id,name,UPPER(c.iso_code) AS iso_new FROM civicrm.civicrm_country cc, country c WHERE cc.iso_code=c.iso_code; 
+INSERT INTO country_new SELECT c.id,name,UPPER(c.iso_code) AS iso_new FROM civicrm.civicrm_country cc, country c WHERE cc.iso_code=c.iso_code;
+INSERT INTO country_new SELECT * FROM country WHERE iso_code="XX";
 
 # swap tables
 RENAME TABLE country TO country_old;
