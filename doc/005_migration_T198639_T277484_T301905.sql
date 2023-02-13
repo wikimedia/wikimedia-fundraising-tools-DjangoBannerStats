@@ -21,6 +21,8 @@ DROP TABLE IF EXISTS django_session;
 DROP TABLE IF EXISTS django_site;
 DROP TABLE IF EXISTS kp_queue2civicrm_log;
 DROP TABLE IF EXISTS optout;
+DROP TABLE IF EXISTS bannerimpression_raw;
+DROP TABLE IF EXISTS landingpageimpressions;
 
 #########################################################
 # MIGRATE COUNTRY TABLE TO UTF8MB4, PURGING JUNK VALUES #
@@ -32,7 +34,7 @@ CREATE TABLE country_new (
   iso_code varchar(8) NOT NULL,
   PRIMARY KEY (id),
   UNIQUE KEY iso_code (iso_code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 # import countries with valid ISO country codes, referencing list from civicrm
 INSERT INTO country_new SELECT c.id,name,UPPER(c.iso_code) AS iso_new FROM civicrm.civicrm_country cc, country c WHERE cc.iso_code=c.iso_code;
@@ -52,7 +54,7 @@ CREATE TABLE language_new (
   iso_code varchar(24) NOT NULL,
   PRIMARY KEY (id),
   UNIQUE KEY iso_code (iso_code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 # import only rows with proper ISO country code, using the list from mediawiki includes/languages/data/Names.php
 INSERT INTO language_new SELECT * FROM language WHERE iso_code IN ('aa','ab','abs','ace','ady','ady-cyrl','aeb','aeb-arab','aeb-latn','af','ak','aln','als','alt','am','ami','an','ang','anp','ar','arc','arn','arq','ary','arz','as','ase','ast','atj','av','avk','awa','ay','az','azb','ba','ban','ban-bali','bar','bat-smg','bbc','bbc-latn','bcc','bci','bcl','be','be-tarask','be-x-old','bg','bgn','bh','bho','bi','bjn','blk','bm','bn','bo','bpy','bqi','br','brh','bs','btm','bto','bug','bxr','ca','cbk-zam','cdo','ce','ceb','ch','cho','chr','chy','ckb','co','cps','cr','crh','crh-cyrl','crh-latn','cs','csb','cu','cv','cy','da','dag','de','de-at','de-ch','de-formal','din','diq','dsb','dtp','dty','dv','dz','ee','egl','el','eml','en','en-ca','en-gb','eo','es','es-419','es-formal','et','eu','ext','fa','fat','ff','fi','fit','fiu-vro','fj','fo','fon','fr','frc','frp','frr','fur','fy','ga','gaa','gag','gan','gan-hans','gan-hant','gcr','gd','gl','gld','glk','gn','gom','gom-deva','gom-latn','gor','got','gpe','grc','gsw','gu','guc','gur','guw','gv','ha','hak','haw','he','hi','hif','hif-latn','hil','ho','hr','hrx','hsb','hsn','ht','hu','hu-formal','hy','hyw','hz','ia','id','ie','ig','igl','ii','ik','ike-cans','ike-latn','ilo','inh','io','is','it','iu','ja','jam','jbo','jut','jv','ka','kaa','kab','kbd','kbd-cyrl','kbp','kcg','kea','kg','khw','ki','kiu','kj','kjh','kjp','kk','kk-arab','kk-cn','kk-cyrl','kk-kz','kk-latn','kk-tr','kl','km','kn','ko','ko-kp','koi','kr','krc','kri','krj','krl','ks','ks-arab','ks-deva','ksh','ksw','ku','ku-arab','ku-latn','kum','kv','kw','ky','la','lad','lb','lbe','lez','lfn','lg','li','lij','liv','lki','lld','lmo','ln','lo','loz','lrc','lt','ltg','lus','luz','lv','lzh','lzz','mad','mag','mai','map-bms','mdf','mg','mh','mhr','mi','min','mk','ml','mn','mni','mnw','mo','mos','mr','mrh','mrj','ms','ms-arab','mt','mus','mwl','my','myv','mzn','na','nah','nan','nap','nb','nds','nds-nl','ne','new','ng','nia','niu','nl','nl-informal','nmz','nn','no','nod','nov','nqo','nrm','nso','nv','ny','nyn','nys','oc','ojb','olo','om','or','os','pa','pag','pam','pap','pcd','pcm','pdc','pdt','pfl','pi','pih','pl','pms','pnb','pnt','prg','ps','pt','pt-br','pwn','qu','qug','rgn','rif','rki','rm','rmc','rmy','rn','ro','roa-rup','roa-tara','rsk','ru','rue','rup','ruq','ruq-cyrl','ruq-latn','rw','ryu','sa','sah','sat','sc','scn','sco','sd','sdc','sdh','se','se-fi','se-no','se-se','sei','ses','sg','sgs','sh','sh-cyrl','sh-latn','shi','shi-latn','shi-tfng','shn','shy','shy-latn','si','simple','sjd','sje','sk','skr','skr-arab','sl','sli','sm','sma','smn','sms','sn','so','sq','sr','sr-ec','sr-el','srn','sro','ss','st','stq','sty','su','sv','sw','syl','szl','szy','ta','tay','tcy','tdd','te','tet','tg','tg-cyrl','tg-latn','th','ti','tk','tl','tly','tly-cyrl','tn','to','tok','tpi','tr','tru','trv','ts','tt','tt-cyrl','tt-latn','tum','tw','ty','tyv','tzm','udm','ug','ug-arab','ug-latn','uk','ur','uz','uz-cyrl','uz-latn','ve','vec','vep','vi','vls','vmf','vmw','vo','vot','vro','wa','war','wls','wo','wuu','xal','xh','xmf','xsy','yi','yo','yrl','yue','za','zea','zgh','zh','zh-classical','zh-cn','zh-hans','zh-hant','zh-hk','zh-min-nan','zh-mo','zh-my','zh-sg','zh-tw','zh-yue','zu','other');
@@ -572,7 +574,7 @@ CREATE TABLE project_new (
   project varchar(128) NOT NULL,
   PRIMARY KEY (id),
   UNIQUE KEY project (project)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 # remove one project that is clearly garbage
 # ..\..\..\..\..\..\..\..\..\..\..\..\..\..\..\..\winnt\win.ini
