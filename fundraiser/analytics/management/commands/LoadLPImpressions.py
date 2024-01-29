@@ -270,12 +270,20 @@ class Command(BaseCommand):
 
                         if "utm_source" in qs:
                             utm_source = qs["utm_source"][0].replace("%", "%%")
+                        if "wmf_source" in qs:
+                            utm_source = qs["wmf_source"][0].replace("%", "%%")
                         if "utm_campaign" in qs:
                             utm_campaign = qs["utm_campaign"][0].replace("%", "%%")
+                        if "wmf_campaign" in qs:
+                            utm_campaign = qs["wmf_campaign"][0].replace("%", "%%")
                         if "utm_medium" in qs:
                             utm_medium = qs["utm_medium"][0].replace("%", "%%")
+                        if "wmf_medium" in qs:
+                            utm_medium = qs["wmf_medium"][0].replace("%", "%%")
                         if "utm_key" in qs:
                             utm_key = qs["utm_key"][0].replace("%", "%%")
+                        if "wmf_key" in qs:
+                            utm_key = qs["wmf_key"][0].replace("%", "%%")
                         if "contact_id" in qs:
                             contact_id = qs["contact_id"][0].replace("%", "%%")
                         if "link_id" in qs:
