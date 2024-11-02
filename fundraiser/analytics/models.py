@@ -165,3 +165,14 @@ class LandingPageImpressions(models.Model):
     class Meta:
         db_table = 'landingpageimpressions'
         managed = False
+
+
+class RecentHit(models.Model):
+    "Used to keep track of number of hits per IP in the past day"
+    id = models.IntegerField(primary_key=True)
+    timestamp = models.DateTimeField(auto_now_add=False)
+    address = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'recenthits'
+        managed = False

@@ -15,7 +15,7 @@ from django.db import connections, transaction, reset_queries
 
 from fundraiser.analytics.functions import lookup_country, lookup_project, \
     lookup_language, roundtime
-from fundraiser.analytics.models import SquidLog
+from fundraiser.analytics.models import SquidLog, RecentHit
 from fundraiser.analytics.regex import ignore_uas, phantomJS, sampled, squidline
 
 
@@ -33,6 +33,10 @@ class Command(BaseCommand):
         "de", "pt", "sv", "nb", "he", "da", "zh", "fi",
         "pl", "cs", "ar", "el", "ko", "tr", "ms", "uk"
     ]
+
+    recent_hit_limit = 10
+    # keys are IP addresses, values are counts
+    recent_hit_counts = dict()
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -76,12 +80,15 @@ class Command(BaseCommand):
             self.verbose = options.get('verbose')
             self.top = options.get('top')
             self.recent = options.get('recent')
+            self.recent_hit_limit = options.get('recent_hit_limit') or self.recent_hit_limit
 
             self.matched = 0
             self.nomatched = 0
             self.ignored = 0
 
             files = []
+            self.expire_recent_hits()
+
             if self.recent:
                 time_now = datetime.now()
                 time_minus1hr = time_now - timedelta(hours=1)
@@ -221,6 +228,8 @@ class Command(BaseCommand):
         sample_rate = 1
 
         counts = dict()
+        # keys are IP addresses, values are arrays of timestamps
+        recent_hit_timestamps_to_write = dict()
 
         filename_only = filename.rsplit('/', 1)[-1]
         if sampled.match(filename_only):
@@ -358,6 +367,19 @@ class Command(BaseCommand):
                                 )
                             continue
 
+                        address = match.group("client")
+                        if address not in self.recent_hit_counts:
+                            self.recent_hit_counts[address] = RecentHit.objects.filter(address=address).count()
+                            recent_hit_timestamps_to_write[address] = []
+
+                        self.recent_hit_counts[address] += 1
+                        recent_hit_timestamps_to_write[address].append(timestamp)
+
+                        if self.recent_hit_counts[address] > self.recent_hit_limit:
+                            results["impression"]["ignored"] += 1
+                            results["impression"]["ignore_because"]["client"] += 1
+                            continue
+
                         # not using the models here saves a lot of wall time
                         try:
                             key = tuple((
@@ -396,7 +418,8 @@ class Command(BaseCommand):
 
             try:
                 if not self.debug:
-                    self.write(counts)
+                    self.write_impressions(counts)
+                    self.write_recent_hits(recent_hit_timestamps_to_write)
 
             except Exception:
                 self.logger.exception(
@@ -413,7 +436,11 @@ class Command(BaseCommand):
 
         return results
 
-    def write(self, impressions):
+    # Delete entries more than one day old from the recenthits table
+    def expire_recent_hits(self):
+        RecentHit.objects.filter(timestamp__lt=datetime.now() - timedelta(hours=24)).delete()
+
+    def write_impressions(self, impressions):
         insert_sql = """INSERT INTO bannerimpressions (timestamp, banner, campaign,
             project_id, language_id, country_id, count)
             VALUES (%s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY update count=count+(%s)"""
@@ -439,6 +466,39 @@ class Command(BaseCommand):
             if self.debug:
                 if len(impressions) == 1:
                     self.logger.info(impressions)
+
+                for r in self.debug_info:
+                    self.logger.info("\t%s", r)
+        finally:
+            reset_queries()
+            transaction.set_autocommit(True)
+
+    def write_recent_hits(self, recent_hit_timestamps):
+        insert_sql = """INSERT INTO recenthits (timestamp, address)
+            VALUES (%s, %s) ON DUPLICATE KEY UPDATE address=address"""
+
+        if not recent_hit_timestamps:
+            return
+
+        transaction.set_autocommit(False)
+        cursor = connections['default'].cursor()
+
+        try:
+            for address, timestamps in recent_hit_timestamps.items():
+                for timestamp in timestamps:
+                    try:
+                        cursor.execute(insert_sql, [timestamp, address])
+                    except MySQLdb._exceptions.Warning:
+                        pass  # We don't care about the message
+                    transaction.commit('default')
+
+        except Exception as exception:
+            transaction.rollback("default")
+            self.logger.exception("UNHANDLED EXCEPTION: %s", str(exception))
+            self.logger.exception(sys.exc_info()[0])
+            if self.debug:
+                if len(recent_hit_timestamps) == 1:
+                    self.logger.info(recent_hit_timestamps)
 
                 for r in self.debug_info:
                     self.logger.info("\t%s", r)
