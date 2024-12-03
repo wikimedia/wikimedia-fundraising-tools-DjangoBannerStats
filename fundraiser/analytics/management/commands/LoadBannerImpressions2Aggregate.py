@@ -34,7 +34,8 @@ class Command(BaseCommand):
         "pl", "cs", "ar", "el", "ko", "tr", "ms", "uk"
     ]
 
-    recent_hit_limit = 10
+    # increased to 1000 to not have stats change during en6c, change back to 10 afterwards
+    recent_hit_limit = 1000
     # keys are IP addresses, values are counts
     recent_hit_counts = dict()
 
